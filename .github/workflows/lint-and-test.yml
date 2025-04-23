@@ -9,7 +9,7 @@ on:
 
 jobs:
     lint:
-        uses: ./.github/workflows/ts-lint.yml
+        uses: ernestdolog/subscription-management-service/.github/workflows/ts-lint.yml
         with:
             node-version: 22
         secrets:
@@ -36,7 +36,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - uses: ./.github/actions/setup-node
+            - uses: ernestdolog/subscription-management-service/.github/actions/setup-node
               with:
                 node-version: 22
                 node-auth-token: ${{ secrets.CI_TOKEN }}
