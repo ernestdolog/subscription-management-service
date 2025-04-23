@@ -1,0 +1,35 @@
+name: Runs ESLint and Prettier for Typescript projects
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node version to setup with'
+        type: string
+        required: false
+        default: '22'
+    secrets:
+      node-auth-token:
+        description: 'Token to use for NPM authentication'
+        required: true
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ inputs.node-version }}
+          node-auth-token: ${{ secrets.node-auth-token }}
+
+      - name: Type Check
+        run: npm run ts:verify
+
+      - name: ESLint
+        run: npm run eslint
+
+      - name: prettier
+        run: npm run prettier:check

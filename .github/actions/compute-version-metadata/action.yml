@@ -1,0 +1,85 @@
+name: Compute Version metadata
+
+description: Generates GitHub Repository environment based on callers workflow.
+
+inputs:
+  repository-version-using:
+    description: "Generate a version using branch name or Git tag. One of 'git-tag' or 'git-branch'"
+    required: true
+  version-prefix:
+    description: 'The string directly before the version'
+    required: false
+
+outputs:
+  version-environment:
+    description: 'development or production'
+    value: ${{ steps.set-version-environment.outputs.version-environment }}
+  version:
+    description: 'The version we are operating upon'
+    value: ${{ steps.set-version-metadata.outputs.version }}
+  commit-hash-short:
+    description: 'Head commits short hash'
+    value: ${{ steps.set-version-metadata.outputs.commit-hash-short }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute Version using branch name
+      shell: bash
+      if: ${{ inputs.repository-version-using == 'git-branch' }}
+      run: |
+        BRANCH_REF='${{ github.event.workflow_run.head_branch }}'
+        SHA_REF='${{ github.event.workflow_run.head_sha }}'
+        echo ${BRANCH_REF:=$GITHUB_REF}
+        echo ${SHA_REF:=$GITHUB_SHA}
+        BRANCH=$(echo "${BRANCH_REF#refs/heads/}" | sed -e 's,.*/\(.*\),\1,')
+        COMMIT_HASH_SHORT=$(git rev-parse --short "$SHA_REF")
+        echo "_VERSION=$(echo 'branch_'$BRANCH'_'$COMMIT_HASH_SHORT)" >> $GITHUB_ENV
+        echo "_COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT" >> $GITHUB_ENV
+
+    - name: Compute Version using tag
+      shell: bash
+      if: ${{ inputs.repository-version-using == 'git-tag' }}
+      run: |
+        TAG=$(echo "${GITHUB_REF#refs/tags/}" | sed -e 's,^v,,')
+        echo "_VERSION=$TAG" >> $GITHUB_ENV
+        SHA_REF='${{ github.sha }}'
+        COMMIT_HASH_SHORT=$(git rev-parse --short "$SHA_REF")
+        echo "_COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT" >> $GITHUB_ENV
+
+    - name: Compute Version using PR
+      shell: bash
+      if: ${{ inputs.repository-version-using == 'pr' }}
+      run: |
+        BRANCH='${{ github.event.pull_request.head.ref }}'
+        COMMIT_HASH_SHORT=$(git rev-parse --short "$BRANCH")
+        echo "_VERSION=$(echo 'pr_'$BRANCH'_'$COMMIT_HASH_SHORT)" >> $GITHUB_ENV
+        echo "_COMMIT_HASH_SHORT=$COMMIT_HASH_SHORT" >> $GITHUB_ENV
+
+    - name: Set Version Environment
+      id: set-version-environment
+      shell: bash
+      run: |
+        if [[ $_VERSION =~ $PRODUCTION_VERSION_REGEX ]]; then
+          echo "production environment detected"
+          echo "version-environment=production" >> $GITHUB_OUTPUT
+        elif [[ $_VERSION =~ $DEVELOPMENT_VERSION_REGEX ]]; then
+          echo "development environment detected"
+          echo "version-environment=development" >> $GITHUB_OUTPUT
+        else
+          echo "development environment detected"
+          echo "version-environment=development" >> $GITHUB_OUTPUT
+        fi
+      env:
+        DEVELOPMENT_VERSION_REGEX: '^${{ inputs.version-prefix }}[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)$'
+        PRODUCTION_VERSION_REGEX: '^${{ inputs.version-prefix }}[0-9]+\.[0-9]+\.[0-9]+$'
+
+    - name: Set Version Metadata
+      id: set-version-metadata
+      shell: bash
+      run: |
+        echo "version detected: $_VERSION"
+        echo "version=$_VERSION" >> $GITHUB_OUTPUT
+
+        echo "commit-hash-short detected: $_COMMIT_HASH_SHORT"
+        echo "commit-hash-short=$_COMMIT_HASH_SHORT" >> $GITHUB_OUTPUT

@@ -1,0 +1,46 @@
+name: Set Regex to deploy
+
+description: Set Regex for semantic version to trigger deploy
+
+inputs:
+  environment:
+    description: 'Environment where deployment is intended'
+    required: false
+    default: 'development'
+  version:
+    description: 'The version of the software to be decided to be deployed on above environment'
+    required: true
+  version-prefix:
+    description: 'The string directly before the version'
+    required: true
+
+outputs:
+  is-deploy:
+    description: 'true or false'
+    value: ${{ steps.set-deploy-trigger.outputs.is-deploy }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set trigger regex
+      id: set-deploy-trigger-regex
+      shell: bash
+      run: |
+        VERSION_PREFIX="${{ inputs.version-prefix }}"
+        if [[ ${{ inputs.environment }} == 'production' ]]
+        then
+          echo "TRIGGER_REGEX=^${VERSION_PREFIX}[0-9]+\.[0-9]+\.[0-9]+$" >> $GITHUB_ENV
+        else
+          echo "TRIGGER_REGEX=^${VERSION_PREFIX}[0-9]+\.[0-9]+\.[0-9]+\-beta\.[0-9]+$" >> $GITHUB_ENV
+        fi
+    - name: Set deployment trigger
+      id: set-deploy-trigger
+      shell: bash
+      run: |
+        if [[ ${{ inputs.version }} =~ $TRIGGER_REGEX ]]; then
+          echo "Version should be deployed"
+          echo "is-deploy=true" >> $GITHUB_OUTPUT
+        else
+          echo "Version should not be deployed"
+          echo "is-deploy=false" >> $GITHUB_OUTPUT
+        fi

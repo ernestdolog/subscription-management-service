@@ -1,0 +1,87 @@
+name: Deploy Consumer Application
+
+on:
+    workflow_run:
+        workflows: ['Publish Docker']
+        types:
+            - completed
+
+jobs:
+    trigger-development:
+        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+        runs-on: ubuntu-latest
+
+        outputs:
+          is-deploy: ${{ steps.trigger-deploy.outputs.is-deploy }}
+          version: ${{ steps.version.outputs.repository-version }}
+
+        steps:
+            - name: Set regex
+              id: trigger-deploy
+              uses: ./.github/actions/set-deploy-regex
+              with:
+                environment: development
+                version: ${{ github.event.workflow_run.head_branch }}
+                version-prefix: "v"
+
+            - name: Set version
+              id: version
+              run: |
+                REPOSITORY_VERSION='${{ github.event.workflow_run.head_branch }}'
+                REPOSITORY_VERSION="${REPOSITORY_VERSION:1}"
+                echo "repository-version=$REPOSITORY_VERSION" >> $GITHUB_OUTPUT
+
+    deploy-development:
+        needs: trigger-development
+        runs-on: ubuntu-latest
+        if: ${{ needs.trigger-development.outputs.is-deploy == 'true' }}
+
+        steps:
+          - uses: actions/checkout@v4
+            with:
+              token: ${{ secrets.CI_TOKEN }}
+
+          - name: Deployment placeholder
+            id: ecs
+            run: echo "Deploy ${{ github.event.repository.name }} image ${{ needs.trigger-development.outputs.version }}  in consumer mode into development envionment"
+
+    trigger-production:
+        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+        runs-on: ubuntu-latest
+
+        outputs:
+          is-deploy: ${{ steps.trigger-deploy.outputs.is-deploy }}
+          version: ${{ steps.version.outputs.repository-version }}
+
+        steps:
+            - name: Set regex
+              id: trigger-deploy
+              uses: ./.github/actions/set-deploy-regex
+              with:
+                environment: production
+                version: ${{ github.event.workflow_run.head_branch }}
+                version-prefix: "v"
+
+            - name: Set version
+              id: version
+              run: |
+                REPOSITORY_VERSION='${{ github.event.workflow_run.head_branch }}'
+                REPOSITORY_VERSION="${REPOSITORY_VERSION:1}"
+                echo "repository-version=$REPOSITORY_VERSION" >> $GITHUB_OUTPUT
+
+    deploy-production:
+        needs: trigger-production
+        runs-on: ubuntu-latest
+        if: ${{ needs.trigger-production.outputs.is-deploy == 'true' }}
+
+        outputs:
+          ecs-yaml-content: ${{ steps.ecs.outputs.ecs-yaml-content }}
+
+        steps:
+          - uses: actions/checkout@v4
+            with:
+              token: ${{ secrets.CI_TOKEN }}
+
+          - name: Deployment placeholder
+            id: ecs
+            run: echo "Deploy ${{ github.event.repository.name }} image ${{ needs.trigger-production.outputs.version }}  in consumer mode into production envionment"

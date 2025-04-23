@@ -1,0 +1,52 @@
+name: Publish Docker
+
+on:
+    release:
+        types:
+            - published
+
+permissions:
+    id-token: write
+    contents: read
+
+jobs:
+    publish-tag:
+        if: ${{ github.event_name == 'release' }}
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Compute Version Metadata
+              id: metadata
+              uses: ./.github/actions/compute-version-metadata
+              with:
+                  repository-version-using: git-tag
+
+            - name: Container Registry login
+              uses: docker/login-action
+              with:
+                registry: ghcr.io
+                username: ${{ github.actor }}
+                password: ${{ secrets.CI_TOKEN }}
+
+            - name: Extract version metadata
+              id: extract-metadata
+              uses: docker/metadata-action@v5
+              with:
+                images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+                tags: |
+                    type=ref,event=branch
+                    type=ref,event=pr
+                    type=pep440,pattern={{version}}
+
+            - name: Build and Push Docker Image
+              id: push
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                push: true
+                tags: ${{ steps.extract-metadata.outputs.tags }}
+                labels: ${{ steps.extract-metadata.outputs.labels }}

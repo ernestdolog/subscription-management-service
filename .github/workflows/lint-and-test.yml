@@ -1,0 +1,70 @@
+name: Lint / Test
+
+concurrency:
+    group: ${{ github.ref_name }}
+    cancel-in-progress: true
+
+on:
+    pull_request:
+
+jobs:
+    lint:
+        uses: ./.github/workflows/ts-lint.yml
+        with:
+            node-version: 22
+        secrets:
+            node-auth-token: ${{secrets.CI_TOKEN}}
+
+    test:
+        needs: [lint]
+        env:
+            POSTGRES: postgres
+
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_USER: ${{ env.POSTGRES }}
+                    POSTGRES_PASSWORD: ${{ env.POSTGRES }}
+                    POSTGRES_DB: ${{ env.POSTGRES }}
+                ports:
+                    - 5444:5432
+                options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup node
+              uses: ./.github/.github/actions/setup-node
+              with:
+                    node-version: 22
+                    node-auth-token: ${{ secrets.CI_TOKEN }}
+
+            - name: Test
+              run: npm run test
+              env:
+                  HTTP_PORT: 4000
+                  HTTP_HOST: 0.0.0.0
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 5444
+                  DB_NAME: ${{ env.POSTGRES }}
+                  DB_USER: ${{ env.POSTGRES }}
+                  DB_PASSWORD: ${{ env.POSTGRES }}
+                  NODE_ENV: test
+                  IS_EXPOSE_SWAGGER: false
+                  LOG_LEVEL: debug
+                  HTTP_CORS_ORIGIN: '*'
+                  TZ: UTC
+                  COGNITO_USER_POOL_ID: cognito-user-pool-id-placeholder
+                  COGNITO_CLIENT_ID: cognito-client-id-placeholder
+                  AUTHENTICATION_SERVICE_API_URL: authentication-service-api-url-placeholder
+                  AWS_SES_FROM_NO_REPLY_EMAIL: aws-noreply-placeholder
+                  AWS_CLOUD_FRONT_URL: cloud-front-url-placeholder
+                  EVENTS_KAFKA_CLIENT_ID: events-kafka-client-id-placeholder
+                  EVENTS_KAFKA_BROKERS: "127.0.0.1:9092"
+                  EVENTS_KAFKA_CONSUMER_GROUP_ID: events-kafka-consumer-group-placeholder
+                  EVENTS_KAFKA_SESSION_TIMEOUT: 20000
+                  EVENTS_KAFKA_HEARTBEAT_INTERVAL: 10000
+                  EVENTS_KAFKA_SSL: true

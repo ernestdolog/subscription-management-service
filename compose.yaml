@@ -2,7 +2,7 @@ version: '3.8'
 services:
     postgres:
         image: postgres:17
-        container_name: objects-subscription-service-database
+        container_name: subscription-management-service-database
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
@@ -32,8 +32,8 @@ services:
             KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
         healthcheck:
             test: >
-                kafka-topics --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic create.organization || exit 1 &&
-                kafka-topics --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic create.organization.two || exit 1
+                kafka-topics --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic subscriptions-subscription-create || exit 1 &&
+                kafka-topics --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic subscriptions-subscription-update || exit 1
             interval: 30s
             timeout: 10s
             retries: 5
