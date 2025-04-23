@@ -29,8 +29,8 @@ jobs:
 
             - name: Create Release
               run: |
-                  npm i semantic-release
+                  npm i semantic-release -g
                   GITHUB_REF=${{ github.ref_name }}
-                  npm run semantic-release
+                  npx semantic-release
               env:
                   GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
