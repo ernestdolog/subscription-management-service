@@ -9,11 +9,22 @@ on:
 
 jobs:
     lint:
-        uses: ernestdolog/subscription-management-service/.github/workflows/ts-lint.yml@development
-        with:
+        - name: Checkout
+            uses: actions/checkout@v4
+
+        - uses: ./.github/actions/setup-node
+            with:
             node-version: 22
-        secrets:
-            node-auth-token: ${{secrets.CI_TOKEN}}
+            node-auth-token: ${{ secrets.CI_TOKEN }}
+
+        - name: Type Check
+            run: npm run ts:verify
+
+        - name: ESLint
+            run: npm run eslint
+
+        - name: prettier
+            run: npm run prettier:check
 
     test:
         needs: [lint]
@@ -36,19 +47,10 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - uses: ernestdolog/subscription-management-service/.github/actions/setup-node@development
+            - uses: ./.github/actions/setup-node
               with:
                 node-version: 22
                 node-auth-token: ${{ secrets.CI_TOKEN }}
-
-            - name: Type Check
-              run: npm run ts:verify
-
-            - name: ESLint
-              run: npm run eslint
-
-            - name: prettier
-              run: npm run prettier:check
 
             - name: Test
               run: npm run test
