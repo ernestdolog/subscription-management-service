@@ -10,21 +10,21 @@ on:
 jobs:
     lint:
         - name: Checkout
-            uses: actions/checkout@v4
+          uses: actions/checkout@v4
 
         - uses: ./.github/actions/setup-node
-            with:
+          with:
             node-version: 22
             node-auth-token: ${{ secrets.CI_TOKEN }}
 
         - name: Type Check
-            run: npm run ts:verify
+          run: npm run ts:verify
 
         - name: ESLint
-            run: npm run eslint
+          run: npm run eslint
 
         - name: prettier
-            run: npm run prettier:check
+          run: npm run prettier:check
 
     test:
         needs: [lint]
