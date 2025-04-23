@@ -19,12 +19,6 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Compute Version Metadata
-              id: metadata
-              uses: ./.github/actions/compute-version-metadata
-              with:
-                  repository-version-using: git-tag
-
             - name: Container Registry login
               uses: docker/login-action
               with:
