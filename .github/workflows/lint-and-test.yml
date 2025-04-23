@@ -36,11 +36,19 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Setup node
-              uses: ./.github/actions/setup-node
+            - uses: ./.github/actions/setup-node
               with:
-                    node-version: 22
-                    node-auth-token: ${{ secrets.CI_TOKEN }}
+                node-version: 22
+                node-auth-token: ${{ secrets.CI_TOKEN }}
+
+            - name: Type Check
+              run: npm run ts:verify
+
+            - name: ESLint
+              run: npm run eslint
+
+            - name: prettier
+              run: npm run prettier:check
 
             - name: Test
               run: npm run test
