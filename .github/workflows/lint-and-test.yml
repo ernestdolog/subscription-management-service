@@ -9,22 +9,25 @@ on:
 
 jobs:
     lint:
-        - name: Checkout
-          uses: actions/checkout@v4
+        runs-on: ubuntu-latest
 
-        - uses: ./.github/actions/setup-node
-          with:
-            node-version: 22
-            node-auth-token: ${{ secrets.CI_TOKEN }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-        - name: Type Check
-          run: npm run ts:verify
+            - uses: ./.github/actions/setup-node
+              with:
+                node-version: 22
+                node-auth-token: ${{ secrets.CI_TOKEN }}
 
-        - name: ESLint
-          run: npm run eslint
+            - name: Type Check
+              run: npm run ts:verify
 
-        - name: prettier
-          run: npm run prettier:check
+            - name: ESLint
+              run: npm run eslint
+
+            - name: prettier
+              run: npm run prettier:check
 
     test:
         needs: [lint]
