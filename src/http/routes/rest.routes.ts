@@ -21,6 +21,7 @@ export const Routes: FastifyPluginCallback = childServer => {
     childServer.route(accountApi.v1.AccountVerify);
     childServer.route(accountApi.v1.AccountDelete);
     childServer.route(accountApi.v1.AccountRetrieve);
+    childServer.route(accountApi.v1.AccountList);
     childServer.route(accountApi.v1.AccountRetrieveMe);
     childServer.route(accountApi.v1.AccountUpdateMe);
     childServer.route(accountApi.v1.AccountSendInvitation);

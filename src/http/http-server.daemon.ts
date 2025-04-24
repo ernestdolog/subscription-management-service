@@ -79,12 +79,12 @@ export class HttpServerDaemon extends AbstractDaemon<IAppConfig> {
     private setupExecpetionHandling() {
         const l = getLogger();
         process.on('uncaughtException', async exception => {
-            l.error('uncaught exception', { e: exception });
+            l.child({ ctx: { exception } }).error('uncaught exception');
             await this.stop(1);
         });
 
         process.on('unhandledRejection', (reason, promise) => {
-            l.error('unhandled rejection', { reason: reason, promise: promise });
+            l.child({ ctx: { reason: reason, promise: promise } }).error('unhandled rejection');
         });
 
         process.on('SIGINT', () => this.stop(0));

@@ -52,6 +52,15 @@ type FetchResponse<ResponseType> = {
  * Expose the application and create fetch functions to test the API.
  */
 export function useTestApplication(props: TestClientProperties) {
+    const queryParams = (params: Record<string, any>) => {
+        return Object.entries(params)
+            .filter(([, value]) => value !== undefined)
+            .map(
+                ([key, value]) =>
+                    `${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`,
+            )
+            .join('&');
+    };
     return {
         application,
         async post<BodyType, ResponseType>(
@@ -106,9 +115,13 @@ export function useTestApplication(props: TestClientProperties) {
             );
             return response as unknown as FetchResponse<ResponseType>;
         },
-        async get<ResponseType>(path: string): Promise<FetchResponse<ResponseType>> {
+        async get<ResponseType, ParamsType = never>(
+            path: string,
+            params?: ParamsType,
+        ): Promise<FetchResponse<ResponseType>> {
             const authHeader = props.isAuthorized ? getAuthHeaders(props.user) : undefined;
-            const response = await fetch(`http://localhost:${appConfig.http.port}${path}`, {
+            const query = params ? `?${queryParams(params)}` : '';
+            const response = await fetch(`http://localhost:${appConfig.http.port}${path}${query}`, {
                 method: 'GET',
                 headers: {
                     ...props.headers,

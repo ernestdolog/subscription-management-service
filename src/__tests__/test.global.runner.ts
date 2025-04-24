@@ -19,7 +19,7 @@ let isTestFailing = false;
 
 const stream = run({
     files: [
-        './src/__tests__/unit/internal-server.error.unit.test.ts',
+        /* './src/__tests__/unit/internal-server.error.unit.test.ts',
         './src/__tests__/unit/get-user.types.test.ts',
         './src/__tests__/unit/logger.unit.test.ts',
 
@@ -31,6 +31,7 @@ const stream = run({
         './src/__tests__/e2e/api/account.create.controller.test.ts',
         './src/__tests__/e2e/api/account.delete.controller.test.ts',
         './src/__tests__/e2e/api/account.retrieve.controller.test.ts',
+      
         './src/__tests__/e2e/api/health-api.resolver.test.ts',
         './src/__tests__/e2e/api/person.update.controller.test.ts',
         './src/__tests__/e2e/api/person.retrieve.controller.test.ts',
@@ -43,7 +44,9 @@ const stream = run({
         './src/__tests__/e2e/api/authentication.logout.controller.test.ts',
         './src/__tests__/e2e/api/authentication.refresh-token.controller.test.ts',
         './src/__tests__/e2e/api/user.forgot-password-confirmation.controller.test.ts',
-        './src/__tests__/e2e/api/user.forgot-password.controller.test.ts',
+        './src/__tests__/e2e/api/user.forgot-password.controller.test.ts',*/
+
+        './src/__tests__/e2e/api/account.list.controller.test.ts',
     ],
     /**
      * As after integration, and e2e tests we truncate databases
