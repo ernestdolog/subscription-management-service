@@ -7,19 +7,19 @@ import {
     AccountRepository,
     getAccountEntityRelationRepository,
     getAccountRepository,
-} from '#app/modules/account/infrastructure/index.js';
+} from '#app/modules/account/domain/index.js';
 import {
     getPersonEntityRelationRepository,
     getPersonRepository,
     PersonEntityRelationRepository,
     PersonRepository,
-} from '#app/modules/person/infrastructure/index.js';
+} from '#app/modules/person/domain/index.js';
 import {
     ContactDetailEntityRelationRepository,
     ContactDetailRepository,
     getContactDetailEntityRelationRepository,
     getContactDetailRepository,
-} from '#app/modules/contact-detail/infrastructure/index.js';
+} from '#app/modules/contact-detail/domain/index.js';
 import { PersonEntityRelationType } from '#app/modules/person/domain/index.js';
 import {
     ContactDetailEntityRelationType,

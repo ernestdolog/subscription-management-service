@@ -18,7 +18,7 @@ import {
     ContactDetailTag,
     ContactDetailType,
 } from '../domain/index.js';
-import { PersonDao } from '#app/modules/person/infrastructure/person.dao.js';
+import { PersonDao } from '#app/modules/person/infrastructure/index.js';
 import { ContactDetailEntityRelationDao } from './contact-detail-entity-relation.dao.js';
 
 @Entity({ name: 'contact_detail' })

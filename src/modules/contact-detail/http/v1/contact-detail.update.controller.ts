@@ -1,4 +1,4 @@
-import { API_PREFIX_V1, TRequest, TResponse } from '#app/http/index.js';
+import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
 import { TServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { auth } from '#app/shared/authorization/plugins/fastify/index.js';
 import {
@@ -12,6 +12,7 @@ import {
 import { ContactDetailUpdateHandler } from '../../application/contact-detail.update.handler.js';
 import { dataSource } from '#app/configs/index.js';
 import { TypeOrmTransactionManager } from '#app/shared/transaction/index.js';
+import { TRequest, TResponse } from '#app/http/index.js';
 
 export const ContactDetailUpdateSchema = {
     tags: ['contact-details'],

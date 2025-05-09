@@ -31,6 +31,7 @@ const stream = run({
         './src/__tests__/e2e/api/account.create.controller.test.ts',
         './src/__tests__/e2e/api/account.delete.controller.test.ts',
         './src/__tests__/e2e/api/account.retrieve.controller.test.ts',
+        './src/__tests__/e2e/api/account.list.controller.test.ts',
         './src/__tests__/e2e/api/health-api.resolver.test.ts',
         './src/__tests__/e2e/api/person.update.controller.test.ts',
         './src/__tests__/e2e/api/person.retrieve.controller.test.ts',

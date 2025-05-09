@@ -6,7 +6,7 @@ import {
 import {
     ContactDetailRepository,
     getContactDetailRepository,
-} from '#app/modules/contact-detail/infrastructure/index.js';
+} from '#app/modules/contact-detail/domain/index.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/index.js';

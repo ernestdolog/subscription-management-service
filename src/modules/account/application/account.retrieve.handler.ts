@@ -1,7 +1,7 @@
 import {
     AccountRepository,
     getAccountRepository,
-} from '#app/modules/account/infrastructure/account.repository.js';
+} from '#app/modules/account/domain/account.repository.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';

@@ -7,9 +7,9 @@ import {
     JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
-    Relation,
     UpdateDateColumn,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { randomUUID } from 'node:crypto';
 import { AccountDao } from './account.dao.js';
 import { AccountInvitationEntity } from '../domain/account-invitation.entity.js';

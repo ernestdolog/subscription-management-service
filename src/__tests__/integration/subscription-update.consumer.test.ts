@@ -2,11 +2,11 @@ import '#app/__tests__/database.setup.js';
 import { it, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { faker } from '@faker-js/faker';
-import { appConfig } from '#app/configs/app.config.js';
+import { appConfig } from '#app/configs/index.js';
 import { kafkaPayloadFactory } from '#app/__tests__/factories/kafka-payload.factory.js';
 import { Kafka } from 'kafkajs';
 import { EventEntityType, EventType } from '#app/shared/kafka/messages/kafka.message.enum.js';
-import { ConsumerDaemon } from '#app/consumers/consumer.daemon.js';
+import { ConsumerDaemon } from '#app/consumer/consumer.daemon.js';
 import { messages } from '#app/shared/kafka/index.js';
 import { SubscriptionUpdateMessageHandler } from '#app/modules/subscription/application/subscription.update-message.handler.js';
 

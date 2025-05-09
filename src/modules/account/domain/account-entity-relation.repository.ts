@@ -1,8 +1,8 @@
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { CommonError } from '#app/shared/error/index.js';
-import { getTypeOrmAccountEntityRelationRepository } from './account-entity-relation.typeorm.repository.js';
-import { AccountEntityRelationEntity } from '../domain/account-entity-relation.entity.js';
+import { getTypeOrmAccountEntityRelationRepository } from '../infrastructure/account-entity-relation.typeorm.repository.js';
+import { AccountEntityRelationEntity } from './account-entity-relation.entity.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 
 export interface AccountEntityRelationRepository {

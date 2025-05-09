@@ -8,7 +8,7 @@ import { messages } from '#app/shared/kafka/index.js';
 import { EventEntityType, EventType } from '#app/shared/kafka/messages/kafka.message.enum.js';
 import { messageProducer } from '#app/shared/producers/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
-import { getSubscriptionRepository, SubscriptionRepository } from '../infrastructure/index.js';
+import { getSubscriptionRepository, SubscriptionRepository } from '../domain/index.js';
 
 type SubscriptionUpdateCommand = {
     id: string;

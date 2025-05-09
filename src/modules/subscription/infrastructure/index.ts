@@ -1,2 +1,2 @@
 export { SubscriptionDao } from './subscription.dao.js';
-export * from './subscription.repository.js';
+export { getTypeOrmSubscriptionRepository } from './subscription.typeorm.repository.js';

@@ -6,9 +6,8 @@ import { addUserViewPermissionFiltertoContactDetail } from './contact-detail.use
 import { ContactDetailEntity, ContactDetailType } from '../domain/index.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 
-const TypeOrmContactDetailRepository = dataSource
-    .getRepository<ContactDetailDao>(ContactDetailDao)
-    .extend({
+const getTypeOrmRepository = () =>
+    dataSource.getRepository<ContactDetailDao>(ContactDetailDao).extend({
         findOne(props: {
             where: FindOptionsWhere<ContactDetailDao>[] | FindOptionsWhere<ContactDetailDao>;
             relations?: FindOptionsRelations<ContactDetailDao>;
@@ -79,10 +78,9 @@ const TypeOrmContactDetailRepository = dataSource
         },
     });
 
-export function getTypeOrmContactDetailRepository(
-    manager: AbstractTransactionManager,
-): typeof TypeOrmContactDetailRepository {
-    if (!manager.context) return TypeOrmContactDetailRepository;
+export function getTypeOrmContactDetailRepository(manager: AbstractTransactionManager) {
+    const typeOrmContactDetailRepository = getTypeOrmRepository();
+    if (!manager.context) return typeOrmContactDetailRepository;
     const entityManager = manager.context as EntityManager;
-    return entityManager.withRepository(TypeOrmContactDetailRepository);
+    return entityManager.withRepository(typeOrmContactDetailRepository);
 }

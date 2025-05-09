@@ -12,10 +12,10 @@ import {
     UpdateDateColumn,
 } from 'typeorm';
 import { PersonDao } from '#app/modules/person/infrastructure/person.dao.js';
-import { AccountEntityRelationDao } from './account-entity-relation.dao.js';
 import { UserEntityType } from '#app/shared/authorization/tool/index.js';
-import { AccountInvitationDao } from './account-invitation.dao.js';
 import { AccountEntity } from '../domain/account.entity.js';
+import { AccountEntityRelationDao } from './account-entity-relation.dao.js';
+import { AccountInvitationDao } from './account-invitation.dao.js';
 
 @Entity({ name: 'account' })
 export class AccountDao<EntityType extends UserEntityType = UserEntityType> extends BaseEntity {

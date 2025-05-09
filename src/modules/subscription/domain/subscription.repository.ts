@@ -1,8 +1,8 @@
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { CommonError } from '#app/shared/error/index.js';
-import { getTypeOrmSubscriptionRepository } from './subscription.typeorm.repository.js';
-import { SubscriptionEntity } from '../domain/subscription.entity.js';
+import { getTypeOrmSubscriptionRepository } from '../infrastructure/index.js';
+import { SubscriptionEntity } from './subscription.entity.js';
 import { User } from '#app/shared/authorization/tool/index.js';
 
 export interface SubscriptionRepository {

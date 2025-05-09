@@ -6,8 +6,8 @@
 import { Application } from '#app/application.js';
 import { appConfig, dataSource, IAppConfig } from '#app/configs/index.js';
 import { getLogger } from '#app/shared/logging/index.js';
-import { HealthServerDaemon } from './consumers/health-server.daemon.js';
-import { ConsumerDaemon } from './consumers/consumer.daemon.js';
+import { HealthServerDaemon } from './consumer/health-server.daemon.js';
+import { ConsumerDaemon } from './consumer/consumer.daemon.js';
 
 (async () => {
     getLogger().info('Booting consumer...');

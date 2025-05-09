@@ -1,13 +1,12 @@
 import { dataSource } from '#app/configs/index.js';
-import { EntityManager } from 'typeorm';
 import { PersonEntityRelationDao } from './person-entity-relation.dao.js';
+import { EntityManager } from 'typeorm';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { PersonEntityRelationEntity } from '../domain/person-entity-relation.entity.js';
 import { User } from '#app/shared/authorization/tool/index.js';
 
-const TypeOrmPersonEntityRelationRepository = dataSource
-    .getRepository<PersonEntityRelationDao>(PersonEntityRelationDao)
-    .extend({
+const getTypeOrmRepository = () =>
+    dataSource.getRepository<PersonEntityRelationDao>(PersonEntityRelationDao).extend({
         async preserveNew(
             input: Partial<PersonEntityRelationEntity> &
                 Pick<PersonEntityRelationEntity, 'personId' | 'entityId' | 'entityType'>,
@@ -35,10 +34,9 @@ const TypeOrmPersonEntityRelationRepository = dataSource
         },
     });
 
-export function getTypeOrmPersonEntityRelationRepository(
-    manager: AbstractTransactionManager,
-): typeof TypeOrmPersonEntityRelationRepository {
-    if (!manager.context) return TypeOrmPersonEntityRelationRepository;
+export function getTypeOrmPersonEntityRelationRepository(manager: AbstractTransactionManager) {
+    const typeOrmPersonEntityRelationRepository = getTypeOrmRepository();
+    if (!manager.context) return typeOrmPersonEntityRelationRepository;
     const entityManager = manager.context as EntityManager;
-    return entityManager.withRepository(TypeOrmPersonEntityRelationRepository);
+    return entityManager.withRepository(typeOrmPersonEntityRelationRepository);
 }

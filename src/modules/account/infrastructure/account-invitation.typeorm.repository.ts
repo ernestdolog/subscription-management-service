@@ -7,9 +7,8 @@ import { addUserViewPermissionFilterToAccountInvitation } from './account-invita
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { AccountEntity, AccountInvitationEntity } from '../domain/index.js';
 
-const TypeOrmAccountInvitationRepository = dataSource
-    .getRepository<AccountInvitationDao>(AccountInvitationDao)
-    .extend({
+const getTypeOrmRepository = () =>
+    dataSource.getRepository<AccountInvitationDao>(AccountInvitationDao).extend({
         findOneWithPermission(props: {
             where:
                 | FindOptionsWhere<AccountInvitationDao>[]
@@ -56,10 +55,9 @@ const TypeOrmAccountInvitationRepository = dataSource
         },
     });
 
-export function getTypeOrmAccountInvitationRepository(
-    manager: AbstractTransactionManager,
-): typeof TypeOrmAccountInvitationRepository {
-    if (!manager.context) return TypeOrmAccountInvitationRepository;
+export function getTypeOrmAccountInvitationRepository(manager: AbstractTransactionManager) {
+    const typeOrmAccountInvitationRepository = getTypeOrmRepository();
+    if (!manager.context) return typeOrmAccountInvitationRepository;
     const entityManager = manager.context as EntityManager;
-    return entityManager.withRepository(TypeOrmAccountInvitationRepository);
+    return entityManager.withRepository(typeOrmAccountInvitationRepository);
 }

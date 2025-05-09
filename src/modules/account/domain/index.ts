@@ -1,4 +1,11 @@
 export { AccountEntity } from './account.entity.js';
 export { AccountEntityRelationEntity } from './account-entity-relation.entity.js';
 export { AccountInvitationEntity } from './account-invitation.entity.js';
+export type { AccountRepository } from './account.repository.js';
+export type { AccountEntityRelationRepository } from './account-entity-relation.repository.js';
+export type { AccountInvitationRepository } from './account-invitation.repository.js';
+export { getAccountRepository } from './account.repository.js';
+export { getAccountEntityRelationRepository } from './account-entity-relation.repository.js';
+export { getAccountInvitationRepository } from './account-invitation.repository.js';
+export { getAccountConnection } from './account-query.connection.js';
 export * from './account-entity-relation.enum.js';
