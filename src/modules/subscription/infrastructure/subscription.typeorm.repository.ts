@@ -6,9 +6,8 @@ import { addUserViewPermissionFilterToSubscription } from './subscription.user.i
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
 
-const TypeOrmSubscriptionRepository = dataSource
-    .getRepository<SubscriptionDao>(SubscriptionDao)
-    .extend({
+const getTypeOrmRepository = () =>
+    dataSource.getRepository<SubscriptionDao>(SubscriptionDao).extend({
         findOneWithPermission(props: {
             where: FindOptionsWhere<SubscriptionDao>[] | FindOptionsWhere<SubscriptionDao>;
             relations?: FindOptionsRelations<SubscriptionDao>;
@@ -68,10 +67,9 @@ const TypeOrmSubscriptionRepository = dataSource
         },
     });
 
-export function getTypeOrmSubscriptionRepository(
-    manager: AbstractTransactionManager,
-): typeof TypeOrmSubscriptionRepository {
-    if (!manager.context) return TypeOrmSubscriptionRepository;
+export function getTypeOrmSubscriptionRepository(manager: AbstractTransactionManager) {
+    const typeOrmSubscriptionRepository = getTypeOrmRepository();
+    if (!manager.context) return typeOrmSubscriptionRepository;
     const entityManager = manager.context as EntityManager;
-    return entityManager.withRepository(TypeOrmSubscriptionRepository);
+    return entityManager.withRepository(typeOrmSubscriptionRepository);
 }

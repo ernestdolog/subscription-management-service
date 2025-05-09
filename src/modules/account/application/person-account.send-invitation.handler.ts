@@ -13,13 +13,13 @@ import { AccountInvitationEntity } from '../domain/account-invitation.entity.js'
 import {
     getSubscriptionRepository,
     SubscriptionRepository,
-} from '#app/modules/subscription/infrastructure/index.js';
+} from '#app/modules/subscription/domain/index.js';
 import {
     AccountInvitationRepository,
     AccountRepository,
     getAccountInvitationRepository,
     getAccountRepository,
-} from '../infrastructure/index.js';
+} from '../domain/index.js';
 import { ContactDetailTag, ContactDetailType } from '#app/modules/contact-detail/domain/index.js';
 import { PersonEntity } from '#app/modules/person/domain/person.entity.js';
 

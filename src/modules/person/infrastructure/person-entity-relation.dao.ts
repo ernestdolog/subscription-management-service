@@ -11,7 +11,7 @@ import {
     UpdateDateColumn,
 } from 'typeorm';
 import { PersonEntityRelationEntity, PersonEntityRelationType } from '../domain/index.js';
-import { PersonDao } from './person.dao.js';
+import { PersonDao } from './index.js';
 
 @Entity({ name: 'person_entity_relation' })
 export class PersonEntityRelationDao<

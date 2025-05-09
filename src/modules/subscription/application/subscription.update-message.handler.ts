@@ -6,7 +6,7 @@ import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import {
     getSubscriptionRepository,
     SubscriptionRepository,
-} from '#app/modules/subscription/infrastructure/index.js';
+} from '#app/modules/subscription/domain/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 
 export class SubscriptionUpdateMessageHandler extends AbstractService<

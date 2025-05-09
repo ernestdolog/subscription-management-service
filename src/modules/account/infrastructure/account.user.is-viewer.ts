@@ -9,7 +9,7 @@
  * - Related to Current Users Subscription
  */
 import { Brackets, SelectQueryBuilder } from 'typeorm';
-import { AccountDao } from '#app/modules/account/infrastructure/account.dao.js';
+import { AccountDao } from './account.dao.js';
 import { AccountEntityRelationType } from '../domain/account-entity-relation.enum.js';
 import { User, UserEntityType } from '#app/shared/authorization/tool/index.js';
 

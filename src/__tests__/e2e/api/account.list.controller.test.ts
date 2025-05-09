@@ -12,7 +12,6 @@ import { subscriptionFactory } from '#app/__tests__/factories/subscription.facto
 import { UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { userFactory } from '#app/__tests__/factories/user.factory.js';
 import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
-import { AccountResponse } from '#app/modules/account/http/v1/index.js';
 import { AccountEntityRelationType } from '#app/modules/account/domain/account-entity-relation.enum.js';
 import {
     ContactDetailEntityRelationType,
@@ -21,9 +20,9 @@ import {
     ContactDetailType,
 } from '#app/modules/contact-detail/domain/index.js';
 import { PersonEntityRelationType } from '#app/modules/person/domain/index.js';
-import { AccountListParams } from '#app/modules/account/http/v1/query/account-list.body.js';
-import { OrderByDirection } from '#app/shared/rest-typeorm-query/index.js';
-import { AccountConnectionResponse } from '#app/modules/account/http/v1/query/account.connection.response.js';
+import { OrderByDirection } from '#app/shared/query-connection/index.js';
+import { AccountConnectionResponse } from '#app/modules/account/http/v1/response/account.list.response.js';
+import { AccountListParams } from '#app/modules/account/http/v1/request/account.list.request.js';
 
 describe('AccountList', async () => {
     it('successfully list accounts', async t => {

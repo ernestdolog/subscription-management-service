@@ -9,7 +9,7 @@ import {
     Relation,
     UpdateDateColumn,
 } from 'typeorm';
-import { ContactDetailDao } from '#app/modules/contact-detail/infrastructure/contact-detail.dao.js';
+import { ContactDetailDao } from '#app/modules/contact-detail/infrastructure/index.js';
 import { PersonEntityRelationDao } from './person-entity-relation.dao.js';
 import { PersonEntity } from '../domain/index.js';
 

@@ -2,9 +2,9 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
-import { getTypeOrmAccountInvitationRepository } from './account-invitation.typeorm.repository.js';
-import { AccountInvitationEntity } from '../domain/account-invitation.entity.js';
-import { AccountEntity } from '../domain/index.js';
+import { getTypeOrmAccountInvitationRepository } from '../infrastructure/account-invitation.typeorm.repository.js';
+import { AccountInvitationEntity } from './account-invitation.entity.js';
+import { AccountEntity } from './index.js';
 
 export interface AccountInvitationRepository {
     getOne(token: string): Promise<AccountInvitationEntity | undefined>;

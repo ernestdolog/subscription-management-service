@@ -1,3 +1,3 @@
 export { ContactDetailDao } from './contact-detail.dao.js';
-export * from './contact-detail.repository.js';
-export * from './contact-detail-entity-relation.repository.js';
+export { getTypeOrmContactDetailRepository } from './contact-detail.typeorm.repository.js';
+export { getTypeOrmContactDetailEntityRelationRepository } from './contact-detail-entity-relation.typeorm.repository.js';

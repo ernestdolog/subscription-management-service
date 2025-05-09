@@ -4,15 +4,12 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
-import {
-    AccountRepository,
-    getAccountRepository,
-} from '#app/modules/account/infrastructure/index.js';
-import { getPersonRepository, PersonRepository } from '#app/modules/person/infrastructure/index.js';
+import { AccountRepository, getAccountRepository } from '#app/modules/account/domain/index.js';
+import { getPersonRepository, PersonRepository } from '#app/modules/person/domain/index.js';
 import {
     ContactDetailRepository,
     getContactDetailRepository,
-} from '#app/modules/contact-detail/infrastructure/index.js';
+} from '#app/modules/contact-detail/domain/index.js';
 import { AccountEntity } from '../domain/index.js';
 import { UserDeleteHandler } from '#app/modules/authentication/application/user.delete.handler.js';
 

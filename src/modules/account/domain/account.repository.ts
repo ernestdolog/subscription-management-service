@@ -2,8 +2,8 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { CommonError } from '#app/shared/error/index.js';
-import { getTypeOrmAccountRepository } from './account.typeorm.repository.js';
-import { AccountEntity } from '../domain/account.entity.js';
+import { AccountEntity } from './account.entity.js';
+import { getTypeOrmAccountRepository } from '../infrastructure/account.typeorm.repository.js';
 
 export interface AccountRepository {
     getOneWithRelations(id: string, user: User): Promise<AccountEntity | undefined>;

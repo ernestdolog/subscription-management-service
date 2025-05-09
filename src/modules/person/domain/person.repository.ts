@@ -2,8 +2,8 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { CommonError } from '#app/shared/error/index.js';
-import { getTypeOrmPersonRepository } from './person.typeorm.repository.js';
-import { PersonEntity } from '../domain/index.js';
+import { getTypeOrmPersonRepository } from '../infrastructure/person.typeorm.repository.js';
+import { PersonEntity } from './index.js';
 
 export interface PersonRepository {
     getOneWithAllRelated(id: string, user: User): Promise<PersonEntity | undefined>;

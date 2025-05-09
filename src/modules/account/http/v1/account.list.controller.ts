@@ -1,12 +1,10 @@
 import { API_PREFIX_V1, TRequest, TResponse } from '#app/http/index.js';
 import { TServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { auth } from '#app/shared/authorization/plugins/fastify/index.js';
-import { TypeOrmTransactionManager } from '#app/shared/transaction/index.js';
-import { getTypeOrmAccountRepository } from '../../infrastructure/account.typeorm.repository.js';
-import { AccountTypeOrmConnection } from './query/account-connection.js';
-import { AccountListParams } from './query/account-list.body.js';
-import { FilterInputType } from '#app/shared/rest-typeorm-query/index.js';
-import { AccountConnectionResponse } from './query/account.connection.response.js';
+import { FilterInputType } from '#app/shared/query-connection/index.js';
+import { getAccountConnection } from '../../domain/index.js';
+import { AccountListParams } from './request/account.list.request.js';
+import { AccountConnectionResponse } from './response/account.list.response.js';
 
 export const AccountListSchema = {
     tags: ['accounts'],
@@ -27,18 +25,16 @@ export const AccountList = {
         request: TRequest<typeof AccountListSchema>,
         response: TResponse<typeof AccountListSchema>,
     ) => {
-        const qb = getTypeOrmAccountRepository(
-            new TypeOrmTransactionManager(),
-        ).createQueryBuilder();
+        const AccountConnection = getAccountConnection();
 
-        const connection = new AccountTypeOrmConnection(
-            qb,
+        const connection = new AccountConnection(
             request.params.filters as FilterInputType,
             request.params.orderBy,
             {
                 first: request.params.first,
                 after: request.params.after,
             },
+            undefined,
             undefined,
             request.user!,
         );

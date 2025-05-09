@@ -5,7 +5,7 @@ import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
-import { getSubscriptionRepository, SubscriptionRepository } from '../infrastructure/index.js';
+import { getSubscriptionRepository, SubscriptionRepository } from '../domain/index.js';
 
 type SubscriptionRetrieveQuery = {
     id: string;

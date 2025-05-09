@@ -6,9 +6,7 @@ import {
     CustomFiltering,
     FilterInputType,
 } from '../../where-filter/typeorm/index.js';
-
-export const DEFAULT_PAGE_SIZE = 10;
-export const MAX_PAGE_SIZE = 50;
+import { DEFAULT_PAGE_SIZE } from '../tool/index.js';
 
 /**
  * Implements an Api pagination practice using "Relay style pagination"
@@ -32,9 +30,6 @@ export const MAX_PAGE_SIZE = 50;
  * ```
  */
 export class TypeOrmConnection<Literal extends ObjectLiteral, ResponseObject> {
-    /**
-     * Recommended: max 50
-     */
     defaultPageSize = DEFAULT_PAGE_SIZE;
 
     readonly queryBuilder: SelectQueryBuilder<Literal>;

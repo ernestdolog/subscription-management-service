@@ -5,9 +5,8 @@ import { AccountEntityRelationDao } from './account-entity-relation.dao.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 
-const TypeOrmAccountEntityRelationRepository = dataSource
-    .getRepository<AccountEntityRelationDao>(AccountEntityRelationDao)
-    .extend({
+const getTypeOrmRepository = () =>
+    dataSource.getRepository<AccountEntityRelationDao>(AccountEntityRelationDao).extend({
         async preserveNew(
             input: Partial<AccountEntityRelationEntity> & {
                 entityId: NonNullable<AccountEntityRelationEntity['entityId']>;
@@ -34,10 +33,9 @@ const TypeOrmAccountEntityRelationRepository = dataSource
         },
     });
 
-export function getTypeOrmAccountEntityRelationRepository(
-    manager: AbstractTransactionManager,
-): typeof TypeOrmAccountEntityRelationRepository {
-    if (!manager.context) return TypeOrmAccountEntityRelationRepository;
+export function getTypeOrmAccountEntityRelationRepository(manager: AbstractTransactionManager) {
+    const typeOrmAccountEntityRelationRepository = getTypeOrmRepository();
+    if (!manager.context) return typeOrmAccountEntityRelationRepository;
     const entityManager = manager.context as EntityManager;
-    return entityManager.withRepository(TypeOrmAccountEntityRelationRepository);
+    return entityManager.withRepository(typeOrmAccountEntityRelationRepository);
 }

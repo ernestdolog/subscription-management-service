@@ -1,4 +1,4 @@
-import { getPersonRepository, PersonRepository } from '#app/modules/person/infrastructure/index.js';
+import { getPersonRepository, PersonRepository } from '#app/modules/person/domain/index.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';

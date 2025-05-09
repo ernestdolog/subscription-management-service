@@ -1,6 +1,6 @@
-export * from './account.repository.js';
+export { getTypeOrmAccountRepository } from './account.typeorm.repository.js';
+export { getTypeOrmAccountEntityRelationRepository } from './account-entity-relation.typeorm.repository.js';
+export { getTypeOrmAccountInvitationRepository } from './account-invitation.typeorm.repository.js';
 export { AccountDao } from './account.dao.js';
-export * from './account-entity-relation.repository.js';
 export { AccountEntityRelationDao } from './account-entity-relation.dao.js';
-export * from './account-invitation.repository.js';
 export { AccountInvitationDao } from './account-invitation.dao.js';

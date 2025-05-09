@@ -5,16 +5,13 @@ import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { AccountEntity } from '../domain/account.entity.js';
-import {
-    AccountInvitationRepository,
-    getAccountInvitationRepository,
-} from '../infrastructure/index.js';
+import { AccountInvitationRepository, getAccountInvitationRepository } from '../domain/index.js';
 import { UserCreateHandler } from '#app/modules/authentication/application/index.js';
 import { AccountEntityRelationType } from '../domain/index.js';
 import {
     getSubscriptionRepository,
     SubscriptionRepository,
-} from '#app/modules/subscription/infrastructure/subscription.repository.js';
+} from '#app/modules/subscription/domain/subscription.repository.js';
 import { ContactDetailTag, ContactDetailType } from '#app/modules/contact-detail/domain/index.js';
 
 type PersonAccountVerifyCommand = {

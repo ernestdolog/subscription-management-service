@@ -1,7 +1,7 @@
 import { Faker } from '@faker-js/faker';
 import { useSeederFactoryManager } from 'typeorm-extension';
 import { UserEntityType } from '#app/shared/authorization/tool/authorization.user.enum.js';
-import { AccountDao } from '#app/modules/account/infrastructure/index.js';
+import { AccountDao } from '#app/modules/account/infrastructure/account.dao.js';
 
 const manager = useSeederFactoryManager();
 

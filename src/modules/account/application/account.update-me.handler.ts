@@ -5,8 +5,8 @@ import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { AccountEntity } from '../domain/account.entity.js';
-import { getPersonRepository, PersonRepository } from '#app/modules/person/infrastructure/index.js';
-import { AccountRepository, getAccountRepository } from '../infrastructure/index.js';
+import { getPersonRepository, PersonRepository } from '#app/modules/person/domain/index.js';
+import { AccountRepository, getAccountRepository } from '../domain/index.js';
 
 type AccountUpdateMeCommand = {
     firstName?: string;

@@ -2,8 +2,8 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
-import { getTypeOrmContactDetailRepository } from './contact-detail.typeorm.repository.js';
-import { ContactDetailEntity } from '../domain/index.js';
+import { getTypeOrmContactDetailRepository } from '../infrastructure/index.js';
+import { ContactDetailEntity } from './index.js';
 
 export interface ContactDetailRepository {
     getOne(id: string, user: User): Promise<ContactDetailEntity | undefined>;

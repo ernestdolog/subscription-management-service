@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE } from '../typeorm/typeorm-connection.js';
+import { DEFAULT_PAGE_SIZE } from './abstract-list.args.js';
 
 export abstract class ListArgs {
     first: number = DEFAULT_PAGE_SIZE;
