@@ -9,6 +9,7 @@ export interface AccountEntityRelationRepository {
     preserveNew(
         input: Partial<AccountEntityRelationEntity> & {
             entityId: NonNullable<AccountEntityRelationEntity['entityId']>;
+            entityType: NonNullable<AccountEntityRelationEntity['entityType']>;
             accountId: NonNullable<AccountEntityRelationEntity['accountId']>;
         },
         user: User,

@@ -10,6 +10,6 @@ export const AccountListParams = Type.Object(
         first: Type.Number({ default: DEFAULT_PAGE_SIZE }),
         after: Type.Optional(Type.String()),
     },
-    { additionalProperties: false, title: 'AccountListBody' },
+    { additionalProperties: false, title: 'AccountListParams' },
 );
 export type AccountListParams = Static<typeof AccountListParams>;
