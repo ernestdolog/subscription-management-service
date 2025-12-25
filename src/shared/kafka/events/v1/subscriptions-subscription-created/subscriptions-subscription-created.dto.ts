@@ -1,9 +1,9 @@
 import { Static, Type } from '@sinclair/typebox';
-import { AbstractKafkaMessageDto } from '#app/shared/kafka/messages/kafka.message.dto.js';
-import { EventEntityType, EventType } from '../../kafka.message.enum.js';
+import { AbstractKafkaEventDto } from '#app/shared/kafka/events/kafka.event.dto.js';
+import { EventEntityType, EventType } from '../../kafka.event.enum.js';
 
-export const SubscriptionsSubscriptionCreateDto = Type.Composite([
-    AbstractKafkaMessageDto,
+export const SubscriptionsSubscriptionCreatedDto = Type.Composite([
+    AbstractKafkaEventDto,
     Type.Object(
         {
             type: Type.Literal(EventType.CREATE),
@@ -18,4 +18,6 @@ export const SubscriptionsSubscriptionCreateDto = Type.Composite([
     ),
 ]);
 
-export type SubscriptionsSubscriptionCreateDto = Static<typeof SubscriptionsSubscriptionCreateDto>;
+export type SubscriptionsSubscriptionCreatedDto = Static<
+    typeof SubscriptionsSubscriptionCreatedDto
+>;

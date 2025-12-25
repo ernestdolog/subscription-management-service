@@ -3,7 +3,7 @@ import { IAppConfig } from '#app/configs/app-config.interface.js';
 import { Consumer, EachMessagePayload } from 'kafkajs';
 import { getLogger } from '#app/shared/logging/index.js';
 import { getKafkaClient } from '#app/shared/kafka/client/client.js';
-import { Topic } from '#app/shared/kafka/messages/kafka.message.enum.js';
+import { Topic } from '#app/shared/kafka/events/kafka.event.enum.js';
 import { ConsumerPayload } from './consumer.payload.js';
 
 export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
@@ -55,20 +55,19 @@ export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
                 partition: payload.partition,
                 value: consumerPayload.data,
                 offset: payload.message.offset,
-                message: consumerPayload.message,
+                event: consumerPayload.event,
             },
         });
         l.info('receive');
 
-        if (!consumerPayload.message)
-            return this.onUnSuccessful(l.warn('cant parse message'), payload);
-        if (!consumerPayload.message.isValid)
-            return this.onUnSuccessful(l.warn('invalid message'), payload);
+        if (!consumerPayload.event) return this.onUnSuccessful(l.warn('cant parse event'), payload);
+        if (!consumerPayload.event.isValid)
+            return this.onUnSuccessful(l.warn('invalid event'), payload);
         if (!consumerPayload.handler)
             return this.onUnSuccessful(l.warn('no handler found'), payload);
 
         try {
-            await consumerPayload.handler.run(consumerPayload.message);
+            await consumerPayload.handler.run(consumerPayload.event);
             await this.onSuccessful(l.info('success'), payload);
         } catch (error) {
             return this.onUnSuccessful(l.warn('handler not successful ', error), payload);
@@ -86,7 +85,7 @@ export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
         ]);
         /**
          * @fyi
-         * this slows down messages as long as we await the heartbeat
+         * this slows down events as long as we await the heartbeat
          * in case we need faster consumption, look here
          */
         await payload.heartbeat();

@@ -1,16 +1,16 @@
 import { ProducerRecord } from 'kafkajs';
 import { AbstractKafkaProducer, getKafkaProducerClient } from '#app/shared/kafka/index.js';
-import { AbstractKafkaMessage } from '#app/shared/kafka/messages/abstract.kafka.message.js';
-import { AbstractKafkaMessageDto } from '#app/shared/kafka/messages/kafka.message.dto.js';
+import { AbstractKafkaEvent } from '#app/shared/kafka/events/abstract.kafka.event.js';
+import { AbstractKafkaEventDto } from '#app/shared/kafka/events/kafka.event.dto.js';
 
-class MessageProducer extends AbstractKafkaProducer<
-    AbstractKafkaMessage<AbstractKafkaMessageDto, never>,
+class EventProducer extends AbstractKafkaProducer<
+    AbstractKafkaEvent<AbstractKafkaEventDto, never>,
     void
 > {
-    protected async _publish(message: ProducerRecord): Promise<void> {
+    protected async _publish(record: ProducerRecord): Promise<void> {
         const producer = await getKafkaProducerClient();
-        await producer.send(message);
+        await producer.send(record);
     }
 }
 
-export const messageProducer = new MessageProducer();
+export const eventProducer = new EventProducer();

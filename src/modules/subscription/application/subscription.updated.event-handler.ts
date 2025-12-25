@@ -1,5 +1,5 @@
 import { getLogger } from '#app/shared/logging/index.js';
-import { messages } from '#app/shared/kafka/index.js';
+import { events } from '#app/shared/kafka/index.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
 import { SubscriptionEntity } from '#app/modules/subscription/domain/subscription.entity.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
@@ -9,8 +9,8 @@ import {
 } from '#app/modules/subscription/domain/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 
-export class SubscriptionUpdateMessageHandler extends AbstractService<
-    messages.v1.SubscriptionsSubscriptionUpdateMessage,
+export class SubscriptionUpdatedEventHandler extends AbstractService<
+    events.v1.SubscriptionsSubscriptionUpdatedEvent,
     SubscriptionEntity | undefined
 > {
     constructor(protected manager: AbstractTransactionManager) {
@@ -18,28 +18,28 @@ export class SubscriptionUpdateMessageHandler extends AbstractService<
     }
 
     protected async runInTransaction(
-        message: messages.v1.SubscriptionsSubscriptionUpdateMessage,
+        event: events.v1.SubscriptionsSubscriptionUpdatedEvent,
     ): Promise<SubscriptionEntity | undefined> {
-        const l = this.l.child({ ctx: message });
+        const l = this.l.child({ ctx: event });
         l.info('start');
 
         const existing = await this.subscriptionRepository.getOneWithRelations(
-            message.content.subscriptionId,
+            event.content.subscriptionId,
         );
 
         const isUpdateReflected =
-            existing?.id === message.content.subscriptionId &&
-            existing?.name === message.content.name &&
-            existing?.createdAt.toString() === message.content.createdAt &&
-            existing?.createdBy === message.content.createdBy &&
-            existing?.updatedAt.toString() === message.content.updatedAt &&
-            existing?.updatedBy === message.content.updatedBy;
+            existing?.id === event.content.subscriptionId &&
+            existing?.name === event.content.name &&
+            existing?.createdAt.toString() === event.content.createdAt &&
+            existing?.createdBy === event.content.createdBy &&
+            existing?.updatedAt.toString() === event.content.updatedAt &&
+            existing?.updatedBy === event.content.updatedBy;
 
         if (existing && !isUpdateReflected) {
-            const updated = existing.update(message.content, {
-                accountId: message.content.updatedBy,
+            const updated = existing.update(event.content, {
+                accountId: event.content.updatedBy,
             } as User);
-            await this.subscriptionRepository.preserve(message.content.subscriptionId, updated);
+            await this.subscriptionRepository.preserve(event.content.subscriptionId, updated);
 
             l.info('success adding changes to subscription');
             return updated;
@@ -55,7 +55,7 @@ export class SubscriptionUpdateMessageHandler extends AbstractService<
 
     private get l() {
         return getLogger().child({
-            cls: 'SubscriptionUpdateMessageHandler',
+            cls: 'SubscriptionUpdatedEventHandler',
         });
     }
 }

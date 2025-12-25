@@ -1,5 +1,5 @@
 import { getLogger } from '#app/shared/logging/index.js';
-import { messages } from '#app/shared/kafka/index.js';
+import { events } from '#app/shared/kafka/index.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
 import { SubscriptionEntity } from '#app/modules/subscription/domain/index.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
@@ -8,8 +8,8 @@ import {
     SubscriptionRepository,
 } from '#app/modules/subscription/domain/index.js';
 
-export class SubscriptionCreateMessageHandler extends AbstractService<
-    messages.v1.SubscriptionsSubscriptionCreateMessage,
+export class SubscriptionCreatedEventHandler extends AbstractService<
+    events.v1.SubscriptionsSubscriptionCreatedEvent,
     SubscriptionEntity | undefined
 > {
     constructor(protected manager: AbstractTransactionManager) {
@@ -17,23 +17,23 @@ export class SubscriptionCreateMessageHandler extends AbstractService<
     }
 
     protected async runInTransaction(
-        message: messages.v1.SubscriptionsSubscriptionCreateMessage,
+        event: events.v1.SubscriptionsSubscriptionCreatedEvent,
     ): Promise<SubscriptionEntity | undefined> {
-        const l = this.l.child({ ctx: message });
+        const l = this.l.child({ ctx: event });
         l.info('start');
 
         const existing = await this.subscriptionRepository.getOneWithRelations(
-            message.content.subscriptionId,
+            event.content.subscriptionId,
         );
 
         if (!existing) {
             const subscription = await this.subscriptionRepository.preserveNew({
-                id: message.content.subscriptionId,
-                name: message.content.name,
-                createdAt: new Date(message.content.createdAt),
-                createdBy: message.content.createdBy,
-                updatedAt: new Date(message.content.updatedAt),
-                updatedBy: message.content.updatedBy,
+                id: event.content.subscriptionId,
+                name: event.content.name,
+                createdAt: new Date(event.content.createdAt),
+                createdBy: event.content.createdBy,
+                updatedAt: new Date(event.content.updatedAt),
+                updatedBy: event.content.updatedBy,
             });
 
             l.info('success save');
@@ -50,7 +50,7 @@ export class SubscriptionCreateMessageHandler extends AbstractService<
 
     private get l() {
         return getLogger().child({
-            cls: 'SubscriptionCreateMessageHandler',
+            cls: 'SubscriptionCreatedEventHandler',
         });
     }
 }
