@@ -23,7 +23,7 @@ const stream = run({
         './src/__tests__/unit/get-user.types.test.ts',
         './src/__tests__/unit/logger.unit.test.ts',
 
-        './src/__tests__/integration/abstract.service.integration.test.ts',
+        './src/__tests__/integration/abstract.handler.integration.test.ts',
         './src/__tests__/integration/user.create.service.integration.test.ts',
         './src/__tests__/integration/subscription-create.consumer.test.ts',
         './src/__tests__/integration/subscription-update.consumer.test.ts',
