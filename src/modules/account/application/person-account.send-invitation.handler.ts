@@ -1,5 +1,5 @@
 import { appConfig } from '#app/configs/app.config.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User, UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { AccountCreateEmail } from '#app/shared/aws-ses/index.js';
@@ -28,7 +28,7 @@ type PersonAccountSendInvitationCommand = {
     user: User;
 };
 
-export class PersonAccountSendInvitationHandler extends AbstractService<
+export class PersonAccountSendInvitationHandler extends AbstractHandler<
     PersonAccountSendInvitationCommand,
     AccountEntity
 > {

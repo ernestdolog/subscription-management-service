@@ -1,4 +1,4 @@
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User, UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { CommonError } from '#app/shared/error/index.js';
@@ -19,7 +19,7 @@ type PersonAccountVerifyCommand = {
     password: string;
 };
 
-export class PersonAccountVerifyHandler extends AbstractService<
+export class PersonAccountVerifyHandler extends AbstractHandler<
     PersonAccountVerifyCommand,
     AccountEntity<UserEntityType.PERSON>
 > {

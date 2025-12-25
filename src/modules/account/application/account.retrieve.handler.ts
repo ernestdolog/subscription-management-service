@@ -2,7 +2,7 @@ import {
     AccountRepository,
     getAccountRepository,
 } from '#app/modules/account/domain/account.repository.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 import { CommonError } from '#app/shared/error/index.js';
@@ -15,7 +15,7 @@ type AccountRetrieveQuery = {
     user: User;
 };
 
-export class AccountRetrieveHandler extends AbstractService<AccountRetrieveQuery, AccountEntity> {
+export class AccountRetrieveHandler extends AbstractHandler<AccountRetrieveQuery, AccountEntity> {
     constructor(protected manager: AbstractTransactionManager) {
         super(manager);
     }

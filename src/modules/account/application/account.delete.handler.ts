@@ -1,4 +1,4 @@
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 import { CommonError } from '#app/shared/error/index.js';
@@ -18,7 +18,7 @@ type AccountDeleteCommand = {
     user: User;
 };
 
-export class AccountDeleteHandler extends AbstractService<AccountDeleteCommand, AccountEntity> {
+export class AccountDeleteHandler extends AbstractHandler<AccountDeleteCommand, AccountEntity> {
     constructor(protected manager: AbstractTransactionManager) {
         super(manager);
     }
