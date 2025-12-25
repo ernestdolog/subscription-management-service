@@ -12,6 +12,11 @@ Backend service containing App-Subscription, User, Account and related concerns.
 
 - NodeJS 24.x
 
+### Tooling
+
+- **tsgo** (`@typescript/native-preview`) - TypeScript's native Go-based compiler for ~10x faster type checking
+- **Oxlint** - Rust-based linter, 50-100x faster than ESLint
+
 ## Setup
 
 > The service requires a Cognito User Pool and a Cognito User Client that is configured via .env file.

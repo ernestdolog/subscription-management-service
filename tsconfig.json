@@ -1,6 +1,6 @@
 {
     "$schema": "https://json.schemastore.org/tsconfig",
-    "display": "Node 20",
+    "display": "Node 24",
     "compilerOptions": {
         /* Specify what module code is generated. */
         "module": "NodeNext",
