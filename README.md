@@ -10,7 +10,7 @@ Backend service containing App-Subscription, User, Account and related concerns.
 
 ## Requirements
 
-- NodeJS 22.x
+- NodeJS 24.x
 
 ## Setup
 

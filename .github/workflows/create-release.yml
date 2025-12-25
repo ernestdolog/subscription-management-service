@@ -24,7 +24,7 @@ jobs:
             - name: Setup Node
               uses: ./.github/actions/setup-node
               with:
-                  node-version: 22
+                  node-version: 24
                   node-auth-token: ${{ secrets.CI_TOKEN }}
 
             - name: Create Release

@@ -6,7 +6,7 @@ inputs:
   node-version:
     description: 'Node version to setup with'
     required: false
-    default: '22'
+    default: '24'
   node-auth-token:
     description: 'Token to use for NPM authentication'
     required: false

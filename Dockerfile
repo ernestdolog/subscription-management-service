@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:24-alpine
 
 # Install dependencies almost always needed
 RUN apk --no-cache add python3 make g++ && ln -sf python3 /usr/bin/python
