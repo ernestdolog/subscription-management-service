@@ -15,7 +15,7 @@ const typeOrmOptionsConfiguration: DataSourceOptions = {
     synchronize: false,
     logging: appConfig.database.logging,
     entities: [DirectoryScan.baseDir + '/modules/**/infrastructure/*.dao.{js,ts}'],
-    migrations: [DirectoryScan.baseDir + '/migrations/**/*.{js,ts}'],
+    migrations: [DirectoryScan.baseDir + '/database/migrations/**/*.{js,ts}'],
     namingStrategy: new SnakeNamingStrategy(),
     ssl: false,
 };

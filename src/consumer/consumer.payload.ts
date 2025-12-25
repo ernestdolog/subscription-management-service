@@ -8,7 +8,7 @@ import {
     AbstractTransactionManager,
     TypeOrmTransactionManager,
 } from '#app/shared/transaction/index.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractKafkaEventDto } from '#app/shared/kafka/events/kafka.event.dto.js';
 
 export class ConsumerPayload {
@@ -33,7 +33,7 @@ export class ConsumerPayload {
     }
 
     get handler():
-        | AbstractService<
+        | AbstractHandler<
               AbstractKafkaEvent<AbstractKafkaEventDto, Record<string, string>>,
               unknown | undefined
           >

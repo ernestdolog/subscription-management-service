@@ -1,5 +1,5 @@
 import { getPersonRepository, PersonRepository } from '#app/modules/person/domain/index.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 import { CommonError } from '#app/shared/error/index.js';
@@ -12,7 +12,7 @@ type PersonRetrieveQuery = {
     user: User;
 };
 
-export class PersonRetrieveHandler extends AbstractService<PersonRetrieveQuery, PersonEntity> {
+export class PersonRetrieveHandler extends AbstractHandler<PersonRetrieveQuery, PersonEntity> {
     constructor(protected manager: AbstractTransactionManager) {
         super(manager);
     }

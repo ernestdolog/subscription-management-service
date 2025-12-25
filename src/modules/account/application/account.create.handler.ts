@@ -1,5 +1,5 @@
 import { getLogger } from '#app/shared/logging/index.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User, UserEntityType } from '#app/shared/authorization/tool/index.js';
 import {
@@ -37,7 +37,7 @@ type AccountCreateHandlerCommand = {
     user: User;
 };
 
-export class AccountCreateHandler extends AbstractService<
+export class AccountCreateHandler extends AbstractHandler<
     AccountCreateHandlerCommand,
     AccountEntity
 > {

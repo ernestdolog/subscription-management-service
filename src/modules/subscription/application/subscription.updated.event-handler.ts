@@ -1,6 +1,6 @@
 import { getLogger } from '#app/shared/logging/index.js';
 import { events } from '#app/shared/kafka/index.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { SubscriptionEntity } from '#app/modules/subscription/domain/subscription.entity.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import {
@@ -9,7 +9,7 @@ import {
 } from '#app/modules/subscription/domain/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 
-export class SubscriptionUpdatedEventHandler extends AbstractService<
+export class SubscriptionUpdatedEventHandler extends AbstractHandler<
     events.v1.SubscriptionsSubscriptionUpdatedEvent,
     SubscriptionEntity | undefined
 > {

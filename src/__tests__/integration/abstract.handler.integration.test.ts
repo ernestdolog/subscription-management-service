@@ -1,7 +1,7 @@
 import '#app/__tests__/database.setup.js';
 import assert from 'node:assert/strict';
 import { it, describe } from 'node:test';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { faker } from '@faker-js/faker';
 import { personFactory } from '../factories/person.factory.js';
 import {
@@ -10,7 +10,7 @@ import {
 } from '#app/shared/transaction/index.js';
 import { getTypeOrmPersonRepository } from '#app/modules/person/infrastructure/person.typeorm.repository.js';
 
-describe('AbstractService', async () => {
+describe('AbstractHandler', async () => {
     /**
      * Update Person firstName successfully
      * There is a transaction with id inside the service
@@ -23,7 +23,7 @@ describe('AbstractService', async () => {
 
         const manager = new TypeOrmTransactionManager();
 
-        const databaseOperation = new DatabaseOperationService(manager);
+        const databaseOperation = new DatabaseOperationHandler(manager);
         const transaction = await databaseOperation.run({
             callback: async (em: AbstractTransactionManager) => {
                 await getTypeOrmPersonRepository(em).preserve(person.id, {
@@ -59,7 +59,7 @@ describe('AbstractService', async () => {
 
         const manager = new TypeOrmTransactionManager();
 
-        const nestedDatabaseOperation = new NestedDatabaseOperationService(manager);
+        const nestedDatabaseOperation = new NestedDatabaseOperationHandler(manager);
         const nestedTransaction = await nestedDatabaseOperation.run({
             callback: async (em: AbstractTransactionManager) => {
                 await getTypeOrmPersonRepository(em).update(
@@ -102,7 +102,7 @@ type TTransactionMetadata = {
     transactionId: string;
 };
 
-export class DatabaseOperationService extends AbstractService<
+export class DatabaseOperationHandler extends AbstractHandler<
     TDatabaseOperationProps,
     TTransactionMetadata
 > {
@@ -139,7 +139,7 @@ type TNestedTransactionMetadata = {
     nestedTransactionId: string;
 };
 
-export class NestedDatabaseOperationService extends AbstractService<
+export class NestedDatabaseOperationHandler extends AbstractHandler<
     TNestedDatabaseOperationProps,
     TNestedTransactionMetadata
 > {
@@ -157,7 +157,7 @@ export class NestedDatabaseOperationService extends AbstractService<
     ): Promise<TNestedTransactionMetadata> {
         await props.callback(this.manager);
 
-        const nestedDatabaseOperation = new DatabaseOperationService(this.manager);
+        const nestedDatabaseOperation = new DatabaseOperationHandler(this.manager);
         const nestedTransaction = await nestedDatabaseOperation.run({
             callback: props.nestedCallback,
         });

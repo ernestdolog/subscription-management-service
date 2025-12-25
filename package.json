@@ -23,7 +23,7 @@
         "typeorm:migrate": "npm run typeorm -- migration:run",
         "typeorm:create": "npm run typeorm -- migration:create -n",
         "typeorm:revert": "npm run typeorm -- migration:revert",
-        "typeorm:generate": "f() { npm run typeorm -- migration:generate -p \"./src/migrations/$@\"; }; f",
+        "typeorm:generate": "f() { npm run typeorm -- migration:generate -p \"./src/database/migrations/$@\"; }; f",
         "prepare": "husky"
     },
     "repository": {

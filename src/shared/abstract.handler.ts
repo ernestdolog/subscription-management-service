@@ -1,5 +1,5 @@
 /**
- * The Abstract Service
+ * The Abstract Handler
  * ====================
  * Extendable class serving out only one public function "run"
  * To comply with Single Objective Principle
@@ -8,7 +8,7 @@
  */
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 
-export abstract class AbstractService<InputType, ReturnType> {
+export abstract class AbstractHandler<InputType, ReturnType> {
     constructor(protected transactionManager: AbstractTransactionManager) {}
     /**
      * Implement to provide functionality
