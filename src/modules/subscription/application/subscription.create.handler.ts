@@ -1,13 +1,12 @@
 import { appConfig } from '#app/configs/app.config.js';
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User, UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { SubscriptionCreateEmail } from '#app/shared/aws-ses/index.js';
 import { subscriptionCreateEmailSendClient } from '#app/shared/email/subscription-create.email.client.js';
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js';
-import { events } from '#app/shared/kafka/index.js';
-import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
+import { SubscriptionEntityEventMapper } from '../domain/index.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { getRequestId } from '#app/shared/logging/plugins/fastify/fastify.request-id.context.js';
 import { eventProducer } from '#app/shared/producers/index.js';
@@ -53,7 +52,7 @@ type SubscriptionCreateCommand = {
     email: string;
 };
 
-export class SubscriptionCreateHandler extends AbstractService<
+export class SubscriptionCreateHandler extends AbstractHandler<
     SubscriptionCreateCommand,
     SubscriptionEntity
 > {
@@ -80,19 +79,7 @@ export class SubscriptionCreateHandler extends AbstractService<
 
         await this.sendEmail(account, invitation);
 
-        const event = new events.v1.SubscriptionsSubscriptionCreatedEvent({
-            type: EventType.CREATE,
-            entityType: EventEntityType.SUBSCRIPTION,
-            entityId: subscription.id,
-            subscriptionId: subscription.id,
-            name: subscription.name,
-            updatedAt: subscription.updatedAt.toString(),
-            updatedBy: subscription.updatedBy,
-            createdAt: subscription.createdAt.toString(),
-            createdBy: subscription.createdBy,
-        });
-
-        await eventProducer.publish(event);
+        await eventProducer.publish(SubscriptionEntityEventMapper.toCreatedEvent(subscription));
 
         l.info('success');
         return subscription;

@@ -1,11 +1,10 @@
-import { AbstractService } from '#app/shared/abstract.service.js';
+import { AbstractHandler } from '#app/shared/abstract.handler.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { User } from '#app/shared/authorization/tool/index.js';
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
-import { events } from '#app/shared/kafka/index.js';
-import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
+import { SubscriptionEntityEventMapper } from '../domain/index.js';
 import { eventProducer } from '#app/shared/producers/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
 import { getSubscriptionRepository, SubscriptionRepository } from '../domain/index.js';
@@ -16,7 +15,7 @@ type SubscriptionUpdateCommand = {
     user: User;
 };
 
-export class SubscriptionUpdateHandler extends AbstractService<
+export class SubscriptionUpdateHandler extends AbstractHandler<
     SubscriptionUpdateCommand,
     SubscriptionEntity
 > {
@@ -40,19 +39,7 @@ export class SubscriptionUpdateHandler extends AbstractService<
         const updatedSubscription = subscription.update(command, command.user);
         await this.subscriptionRepository.preserve(command.id, updatedSubscription);
 
-        const event = new events.v1.SubscriptionsSubscriptionUpdatedEvent({
-            type: EventType.UPDATE,
-            entityType: EventEntityType.SUBSCRIPTION,
-            entityId: subscription.id,
-            subscriptionId: subscription.id,
-            name: subscription.name,
-            updatedAt: subscription.updatedAt.toString(),
-            updatedBy: subscription.updatedBy ?? 'system',
-            createdAt: subscription.createdAt.toString(),
-            createdBy: subscription.createdBy ?? 'system',
-        });
-
-        await eventProducer.publish(event);
+        await eventProducer.publish(SubscriptionEntityEventMapper.toUpdatedEvent(subscription));
 
         l.info('success');
         return subscription;
