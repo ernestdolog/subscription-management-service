@@ -31,8 +31,6 @@
         "strict": true,
         /* When set to true, TypeScript will raise an error when a class property was declared but not set in the constructor. */
         "strictPropertyInitialization": false,
-        /* This flag controls how import works */
-        "importsNotUsedAsValues": "remove",
         /* Specify the location where a debugger should locate TypeScript files instead of relative source locations */
         "sourceRoot": "/",
         /* The longest common path of all non-declaration input files. */
@@ -41,8 +39,6 @@
         "outDir": "build",
         /* Specify to generate .d.ts files for every TypeScript or JavaScript file inside the project. */
         "declaration": true,
-        /* Sets a base directory from which to resolve non-relative module names. */
-        "baseUrl": ".",
         /* A series of entries which re-map imports to lookup locations relative to the baseUrl if set, or to the tsconfig file itself otherwise. */
         "paths": {
             "#app/*": ["./src/*"]

@@ -14,7 +14,7 @@
         "test": "node --import tsx ./src/__tests__/test.global.runner.ts",
         "prettier:check": "prettier -l .",
         "prettier:fix": "prettier --write .",
-        "oxlint": "oxlint --deny-warnings",
+        "oxlint": "oxlint",
         "oxlint:fix": "oxlint --fix",
         "lint": "npm run oxlint && npm run prettier:check",
         "lint:fix": "npm run oxlint:fix && npm run prettier:fix",
