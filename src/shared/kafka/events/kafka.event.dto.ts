@@ -1,7 +1,7 @@
 import { Static, Type } from '@sinclair/typebox';
-import { EventEntityType, EventType } from './kafka.message.enum.js';
+import { EventEntityType, EventType } from './kafka.event.enum.js';
 
-export const AbstractKafkaMessageDto = Type.Object(
+export const AbstractKafkaEventDto = Type.Object(
     {
         type: Type.Enum(EventType, { enum: Object.keys(EventType) }),
         /**
@@ -20,4 +20,4 @@ export const AbstractKafkaMessageDto = Type.Object(
     { additionalProperties: false },
 );
 
-export type AbstractKafkaMessageDto = Static<typeof AbstractKafkaMessageDto>;
+export type AbstractKafkaEventDto = Static<typeof AbstractKafkaEventDto>;

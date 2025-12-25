@@ -4,9 +4,9 @@ import { User } from '#app/shared/authorization/tool/index.js';
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
-import { messages } from '#app/shared/kafka/index.js';
-import { EventEntityType, EventType } from '#app/shared/kafka/messages/kafka.message.enum.js';
-import { messageProducer } from '#app/shared/producers/index.js';
+import { events } from '#app/shared/kafka/index.js';
+import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
+import { eventProducer } from '#app/shared/producers/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
 import { getSubscriptionRepository, SubscriptionRepository } from '../domain/index.js';
 
@@ -40,7 +40,7 @@ export class SubscriptionUpdateHandler extends AbstractService<
         const updatedSubscription = subscription.update(command, command.user);
         await this.subscriptionRepository.preserve(command.id, updatedSubscription);
 
-        const message = new messages.v1.SubscriptionsSubscriptionUpdateMessage({
+        const event = new events.v1.SubscriptionsSubscriptionUpdatedEvent({
             type: EventType.UPDATE,
             entityType: EventEntityType.SUBSCRIPTION,
             entityId: subscription.id,
@@ -52,7 +52,7 @@ export class SubscriptionUpdateHandler extends AbstractService<
             createdBy: subscription.createdBy ?? 'system',
         });
 
-        await messageProducer.publish(message);
+        await eventProducer.publish(event);
 
         l.info('success');
         return subscription;

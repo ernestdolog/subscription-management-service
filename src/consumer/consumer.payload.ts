@@ -1,15 +1,15 @@
 import { EachMessagePayload } from 'kafkajs';
-import { messages } from '#app/shared/kafka/index.js';
-import { AbstractKafkaMessage } from '#app/shared/kafka/messages/abstract.kafka.message.js';
-import { Topic } from '#app/shared/kafka/messages/kafka.message.enum.js';
-import { SubscriptionCreateMessageHandler } from '#app/modules/subscription/application/subscription.create-message.handler.js';
-import { SubscriptionUpdateMessageHandler } from '#app/modules/subscription/application/subscription.update-message.handler.js';
+import { events } from '#app/shared/kafka/index.js';
+import { AbstractKafkaEvent } from '#app/shared/kafka/events/abstract.kafka.event.js';
+import { Topic } from '#app/shared/kafka/events/kafka.event.enum.js';
+import { SubscriptionCreatedEventHandler } from '#app/modules/subscription/application/subscription.created.event-handler.js';
+import { SubscriptionUpdatedEventHandler } from '#app/modules/subscription/application/subscription.updated.event-handler.js';
 import {
     AbstractTransactionManager,
     TypeOrmTransactionManager,
 } from '#app/shared/transaction/index.js';
 import { AbstractService } from '#app/shared/abstract.service.js';
-import { AbstractKafkaMessageDto } from '#app/shared/kafka/messages/kafka.message.dto.js';
+import { AbstractKafkaEventDto } from '#app/shared/kafka/events/kafka.event.dto.js';
 
 export class ConsumerPayload {
     private manager: AbstractTransactionManager;
@@ -21,12 +21,12 @@ export class ConsumerPayload {
         return JSON.parse(Buffer.from(this.payload.message.value ?? '').toString('utf8'));
     }
 
-    get message(): AbstractKafkaMessage | undefined {
+    get event(): AbstractKafkaEvent | undefined {
         switch (this.payload.topic) {
             case Topic.SUBSCRIPTIONS_SUBSCRIPTION_CREATE:
-                return new messages.v1.SubscriptionsSubscriptionCreateMessage(this.data);
+                return new events.v1.SubscriptionsSubscriptionCreatedEvent(this.data);
             case Topic.SUBSCRIPTIONS_SUBSCRIPTION_UPDATE:
-                return new messages.v1.SubscriptionsSubscriptionUpdateMessage(this.data);
+                return new events.v1.SubscriptionsSubscriptionUpdatedEvent(this.data);
             default:
                 return;
         }
@@ -34,15 +34,15 @@ export class ConsumerPayload {
 
     get handler():
         | AbstractService<
-              AbstractKafkaMessage<AbstractKafkaMessageDto, Record<string, string>>,
+              AbstractKafkaEvent<AbstractKafkaEventDto, Record<string, string>>,
               unknown | undefined
           >
         | undefined {
         switch (this.payload.topic) {
             case Topic.SUBSCRIPTIONS_SUBSCRIPTION_CREATE:
-                return new SubscriptionCreateMessageHandler(this.manager);
+                return new SubscriptionCreatedEventHandler(this.manager);
             case Topic.SUBSCRIPTIONS_SUBSCRIPTION_UPDATE:
-                return new SubscriptionUpdateMessageHandler(this.manager);
+                return new SubscriptionUpdatedEventHandler(this.manager);
             default:
                 return;
         }

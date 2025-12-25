@@ -1,18 +1,18 @@
 import { Message, ProducerRecord } from 'kafkajs';
-import { Topic } from './kafka.message.enum.js';
+import { Topic } from './kafka.event.enum.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js';
-import { KafkaMessageError } from './kafka.message.error.js';
-import { AbstractKafkaMessageDto } from './kafka.message.dto.js';
+import { KafkaEventError } from './kafka.event.error.js';
+import { AbstractKafkaEventDto } from './kafka.event.dto.js';
 import { randomUUID } from 'node:crypto';
 
-export type MessageVersion = 'v1' | 'v2';
+export type EventVersion = 'v1' | 'v2';
 /**
- * Base class for all the Kafka messages.
+ * Base class for all the Kafka events.
  *
- * It has to be extended by all the messages along with Dto.
+ * It has to be extended by all the events along with Dto.
  */
-export abstract class AbstractKafkaMessage<
-    Dto extends AbstractKafkaMessageDto = AbstractKafkaMessageDto,
+export abstract class AbstractKafkaEvent<
+    Dto extends AbstractKafkaEventDto = AbstractKafkaEventDto,
     Attributes extends Record<string, string> = Record<string, string>,
 > {
     /**
@@ -26,11 +26,11 @@ export abstract class AbstractKafkaMessage<
      */
     abstract get topic(): Topic;
     /**
-     * Message version. For migrations.
+     * Event version. For migrations.
      */
-    abstract get version(): MessageVersion;
+    abstract get version(): EventVersion;
     /**
-     * Implement for message content validation.
+     * Implement for event content validation.
      */
     abstract isValid: boolean;
     /**
@@ -38,7 +38,7 @@ export abstract class AbstractKafkaMessage<
      */
     readonly content: Dto;
     /**
-     * PubSub message attributes.
+     * PubSub event attributes.
      */
     readonly attributes: Attributes;
 
@@ -54,7 +54,7 @@ export abstract class AbstractKafkaMessage<
         this.attributes = attributes || ({} as Attributes);
     }
     /**
-     * Overwrite to convert a message to a Kafka message.
+     * Overwrite to convert an event to a Kafka message.
      */
     protected compose(dto: Dto): Message {
         return {
@@ -69,7 +69,7 @@ export abstract class AbstractKafkaMessage<
 
     get(): ProducerRecord {
         if (!this.isValid) {
-            throw new InternalServerError(KafkaMessageError.MESSAGE_VALIDATION, {
+            throw new InternalServerError(KafkaEventError.EVENT_VALIDATION, {
                 topic: this.topic,
                 content: this.content,
             });

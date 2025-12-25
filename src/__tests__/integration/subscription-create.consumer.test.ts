@@ -5,12 +5,12 @@ import { faker } from '@faker-js/faker';
 import { appConfig } from '#app/configs/app.config.js';
 import { kafkaPayloadFactory } from '#app/__tests__/factories/kafka-payload.factory.js';
 import { Kafka } from 'kafkajs';
-import { EventEntityType, EventType } from '#app/shared/kafka/messages/kafka.message.enum.js';
+import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
 import { ConsumerDaemon } from '#app/consumer/consumer.daemon.js';
-import { messages } from '#app/shared/kafka/index.js';
-import { SubscriptionCreateMessageHandler } from '#app/modules/subscription/application/subscription.create-message.handler.js';
+import { events } from '#app/shared/kafka/index.js';
+import { SubscriptionCreatedEventHandler } from '#app/modules/subscription/application/subscription.created.event-handler.js';
 
-describe('SubscriptionCreateMessageHandler', async () => {
+describe('SubscriptionCreatedEventHandler', async () => {
     before(async () => {
         /**
          * Hit out Kafka client:
@@ -18,14 +18,14 @@ describe('SubscriptionCreateMessageHandler', async () => {
         Kafka.prototype.consumer = (() => ({ commitOffsets: () => {} })) as never;
     });
 
-    it('successfully consume messages.v1.SubscriptionsSubscriptionCreateMessage', async testContext => {
-        const runSubscriptionCreateHandlerMock = testContext.mock.method(
-            SubscriptionCreateMessageHandler.prototype,
+    it('successfully consume events.v1.SubscriptionsSubscriptionCreatedEvent', async testContext => {
+        const runSubscriptionCreatedHandlerMock = testContext.mock.method(
+            SubscriptionCreatedEventHandler.prototype,
             'run',
         );
-        assert.strictEqual(runSubscriptionCreateHandlerMock.mock.calls.length, 0);
+        assert.strictEqual(runSubscriptionCreatedHandlerMock.mock.calls.length, 0);
 
-        const message = new messages.v1.SubscriptionsSubscriptionCreateMessage({
+        const event = new events.v1.SubscriptionsSubscriptionCreatedEvent({
             type: EventType.CREATE,
             entityType: EventEntityType.SUBSCRIPTION,
             entityId: faker.string.uuid(),
@@ -36,7 +36,7 @@ describe('SubscriptionCreateMessageHandler', async () => {
             createdAt: faker.date.past().toUTCString(),
             createdBy: faker.string.uuid(),
         });
-        const kafkaPayload = kafkaPayloadFactory(message);
+        const kafkaPayload = kafkaPayloadFactory(event);
 
         const consumer = new ConsumerDaemon(appConfig);
         await (consumer as any).onEvent(kafkaPayload);
@@ -44,15 +44,15 @@ describe('SubscriptionCreateMessageHandler', async () => {
         /**
          * responsible service called once
          */
-        assert.strictEqual(runSubscriptionCreateHandlerMock.mock.calls.length, 1);
+        assert.strictEqual(runSubscriptionCreatedHandlerMock.mock.calls.length, 1);
         /**
-         * with the message
+         * with the event
          */
-        const runAccountingAreaCreateConsumerServiceCall =
-            runSubscriptionCreateHandlerMock.mock.calls[0];
+        const runSubscriptionCreatedEventHandlerCall =
+            runSubscriptionCreatedHandlerMock.mock.calls[0];
         assert.equal(
-            JSON.stringify(runAccountingAreaCreateConsumerServiceCall.arguments[0]),
-            JSON.stringify(message),
+            JSON.stringify(runSubscriptionCreatedEventHandlerCall.arguments[0]),
+            JSON.stringify(event),
         );
     });
 });
