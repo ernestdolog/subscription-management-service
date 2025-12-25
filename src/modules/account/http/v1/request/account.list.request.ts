@@ -18,6 +18,11 @@ export const AccountFilterInput = Type.Object(
         id: Type.Optional(StringFilterOperator),
         entityType: Type.Optional(UserEntityTypeFilterOperator),
         entityId: Type.Optional(StringFilterOperator),
+        /**
+         * Filter by person's lastName using relation__column syntax.
+         * Auto-joins person table and filters on person.last_name.
+         */
+        person__lastName: Type.Optional(StringFilterOperator),
     },
     { additionalProperties: false, title: 'AccountFilterInput' },
 );
@@ -32,7 +37,7 @@ export const AccountOrderByInput = Type.Object(
 );
 export type AccountOrderByInput = Static<typeof AccountOrderByInput>;
 
-export const AccountListParams = Type.Object(
+export const AccountListQuery = Type.Object(
     {
         filters: Type.Optional(Type.Array(AccountFilterInput)),
         orderBy: Type.Optional(AccountOrderByInput),
@@ -41,4 +46,4 @@ export const AccountListParams = Type.Object(
     },
     { additionalProperties: false, title: 'AccountListBody' },
 );
-export type AccountListParams = Static<typeof AccountListParams>;
+export type AccountListQuery = Static<typeof AccountListQuery>;

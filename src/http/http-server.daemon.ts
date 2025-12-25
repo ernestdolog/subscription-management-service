@@ -16,6 +16,7 @@ import { ErrorHandler } from '#app/shared/error/plugins/fastify/index.js';
 import { SWAGGER_SETUP, SWAGGER_UI_SETUP } from '#app/http/swagger/http-server.swagger.js';
 import cors from '@fastify/cors';
 import { Routes } from './routes/rest.routes.js';
+import { querystringParser } from './http-server.query-parser.js';
 
 export class HttpServerDaemon extends AbstractDaemon<IAppConfig> {
     private httpServer: FastifyInstance;
@@ -32,6 +33,7 @@ export class HttpServerDaemon extends AbstractDaemon<IAppConfig> {
         this.setupExecpetionHandling();
         const app = Fastify({
             logger: false,
+            querystringParser,
         });
 
         app.setErrorHandler(ErrorHandler);

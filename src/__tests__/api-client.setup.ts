@@ -52,14 +52,33 @@ type FetchResponse<ResponseType> = {
  * Expose the application and create fetch functions to test the API.
  */
 export function useTestApplication(props: TestClientProperties) {
-    const queryParams = (params: Record<string, any>) => {
-        return Object.entries(params)
-            .filter(([, value]) => value !== undefined)
-            .map(
-                ([key, value]) =>
-                    `${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`,
-            )
-            .join('&');
+    const buildQueryString = (query?: Record<string, unknown>) => {
+        if (!query) return '';
+
+        const params = new URLSearchParams();
+
+        for (const [key, value] of Object.entries(query)) {
+            if (value === undefined) continue;
+
+            if (
+                typeof value === 'string' ||
+                typeof value === 'number' ||
+                typeof value === 'boolean'
+            ) {
+                params.append(key, String(value));
+                continue;
+            }
+
+            if (Array.isArray(value)) {
+                params.append(key, JSON.stringify(value));
+                continue;
+            }
+
+            params.append(key, JSON.stringify(value));
+        }
+
+        const qeryString = params.toString();
+        return qeryString ? `?${qeryString}` : '';
     };
     return {
         application,
@@ -115,19 +134,22 @@ export function useTestApplication(props: TestClientProperties) {
             );
             return response as unknown as FetchResponse<ResponseType>;
         },
-        async get<ResponseType, ParamsType = never>(
+        async get<ResponseType, QueryType = never>(
             path: string,
-            params?: ParamsType,
+            query?: QueryType,
         ): Promise<FetchResponse<ResponseType>> {
             const authHeader = props.isAuthorized ? getAuthHeaders(props.user) : undefined;
-            const query = params ? `?${queryParams(params)}` : '';
-            const response = await fetch(`http://localhost:${appConfig.http.port}${path}${query}`, {
-                method: 'GET',
-                headers: {
-                    ...props.headers,
-                    ...authHeader,
+            const queryString = query ? `?${buildQueryString(query)}` : '';
+            const response = await fetch(
+                `http://localhost:${appConfig.http.port}${path}${queryString}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        ...props.headers,
+                        ...authHeader,
+                    },
                 },
-            });
+            );
             return response as unknown as FetchResponse<ResponseType>;
         },
     };

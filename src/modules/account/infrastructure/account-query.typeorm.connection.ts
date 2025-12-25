@@ -1,3 +1,4 @@
+import { SelectQueryBuilder } from 'typeorm';
 import { OrderByInput, TypeOrmConnection } from '#app/shared/query-connection/pagination/index.js';
 import { AccountDao } from './account.dao.js';
 import { addUserViewPermissionFiltertoAccount } from '#app/modules/account/infrastructure/account.user.is-viewer.js';
@@ -16,16 +17,32 @@ export class AccountTypeOrmConnection extends TypeOrmConnection<AccountDao, Acco
         protected customFiltering?: CustomFiltering,
         protected user?: User,
     ) {
-        const qb = getTypeOrmAccountRepository(
-            new TypeOrmTransactionManager(),
-        ).createQueryBuilder();
+        super(filters, orderBy, page, search, customFiltering);
+    }
 
-        if (user) addUserViewPermissionFiltertoAccount(user, qb);
+    protected _query(): SelectQueryBuilder<AccountDao> {
+        const queryBuilder = getTypeOrmAccountRepository(new TypeOrmTransactionManager())
+            .createQueryBuilder('account')
+            .select([
+                'account.id',
+                'account.entityType',
+                'account.entityId',
+                'account.createdAt',
+                'account.createdBy',
+                'account.updatedAt',
+                'account.updatedBy',
+            ])
+            .leftJoin('account.person', 'person')
+            .addSelect(['person.id', 'person.firstName', 'person.lastName']);
 
-        super(qb, filters, orderBy, page, search);
+        if (this.user) {
+            addUserViewPermissionFiltertoAccount(this.user, queryBuilder);
+        }
+
+        return queryBuilder;
     }
 
     protected toResponseObject(literal: AccountDao): AccountNode {
-        return toAccountNode(literal.toEntity);
+        return toAccountNode(literal);
     }
 }

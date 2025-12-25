@@ -22,7 +22,7 @@ import {
 import { PersonEntityRelationType } from '#app/modules/person/domain/index.js';
 import { OrderByDirection } from '#app/shared/query-connection/index.js';
 import { AccountConnectionResponse } from '#app/modules/account/http/v1/response/account.list.response.js';
-import { AccountListParams } from '#app/modules/account/http/v1/request/account.list.request.js';
+import { AccountListQuery } from '#app/modules/account/http/v1/request/account.list.request.js';
 
 describe('AccountList', async () => {
     it('successfully list accounts', async t => {
@@ -85,7 +85,7 @@ describe('AccountList', async () => {
             isAuthorized: true,
             user,
         });
-        const result = await testApi.get<AccountConnectionResponse, AccountListParams>(
+        const result = await testApi.get<AccountConnectionResponse, AccountListQuery>(
             API_PREFIX_V1 + '/accounts',
             {
                 orderBy: { field: 'created_at', direction: OrderByDirection.DESC },
@@ -103,5 +103,107 @@ describe('AccountList', async () => {
         assert.equal(!!data.edges.find(edge => edge.node.id === accountOne.id), true);
         assert.equal(!!data.edges.find(edge => edge.node.id === accountTwo.id), true);
         assert.equal(!!data.edges.find(edge => edge.node.id === accountThree.id), true);
+    });
+
+    it('filters accounts by person lastName and returns entity with person data', async t => {
+        const subscription = await subscriptionFactory().save();
+
+        const personSmith = await personFactory().save({
+            firstName: 'John',
+            lastName: 'Smith',
+        });
+        await personEntityRelationFactory().save({
+            personId: personSmith.id,
+            entityType: PersonEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+        const contactDetailSmith = await contactDetailFactory().save({
+            tag: ContactDetailTag.APP_SIGNUP,
+            type: ContactDetailType.EMAIL,
+            entityType: ContactDetailEntityType.PERSON,
+            entityId: personSmith.id,
+        });
+        await contactDetailEntityRelationFactory().save({
+            contactDetailId: contactDetailSmith.id,
+            entityType: ContactDetailEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+        const accountSmith = await accountFactory().save({
+            entityId: personSmith.id,
+            entityType: UserEntityType.PERSON,
+        });
+        await accountEntityRelationFactory().save({
+            accountId: accountSmith.id,
+            entityType: AccountEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+
+        const personJones = await personFactory().save({
+            firstName: 'Jane',
+            lastName: 'Jones',
+        });
+        await personEntityRelationFactory().save({
+            personId: personJones.id,
+            entityType: PersonEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+        const contactDetailJones = await contactDetailFactory().save({
+            tag: ContactDetailTag.APP_SIGNUP,
+            type: ContactDetailType.EMAIL,
+            entityType: ContactDetailEntityType.PERSON,
+            entityId: personJones.id,
+        });
+        await contactDetailEntityRelationFactory().save({
+            contactDetailId: contactDetailJones.id,
+            entityType: ContactDetailEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+        const accountJones = await accountFactory().save({
+            entityId: personJones.id,
+            entityType: UserEntityType.PERSON,
+        });
+        await accountEntityRelationFactory().save({
+            accountId: accountJones.id,
+            entityType: AccountEntityRelationType.SUBSCRIPTION,
+            entityId: subscription.id,
+        });
+
+        const user = userFactory({
+            accountId: accountSmith.id,
+            entityId: personSmith.id,
+            entityType: UserEntityType.PERSON,
+            subscriptionId: subscription.id,
+        });
+
+        const testApi = useTestApplication({
+            isAuthorized: true,
+            user,
+        });
+
+        const result = await testApi.get<AccountConnectionResponse, AccountListQuery>(
+            API_PREFIX_V1 + '/accounts',
+            {
+                filters: [{ person__lastName: { eq: 'Smith' } }],
+                orderBy: { field: 'created_at', direction: OrderByDirection.DESC },
+                first: 10,
+            },
+        );
+
+        assert.deepEqual(result.ok, true);
+        assert.deepEqual(result.status, 200);
+
+        const data = await result.json();
+
+        assert.equal(data.pageInfo.totalCount, 1);
+        assert.equal(data.edges.length, 1);
+
+        const node = data.edges[0].node;
+        assert.equal(node.id, accountSmith.id);
+        assert.equal(node.entityType, UserEntityType.PERSON);
+        assert.equal(node.entityId, personSmith.id);
+
+        assert.equal(node.entity.id, personSmith.id);
+        assert.equal(node.entity.firstName, 'John');
+        assert.equal(node.entity.lastName, 'Smith');
     });
 });
