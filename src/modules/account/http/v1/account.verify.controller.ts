@@ -1,4 +1,4 @@
-import { API_PREFIX_V1, TRequest, TResponse } from '#app/http/index.js';
+import { API_PREFIX_V1, TRequest, TResponse } from '#app/api-server/index.js';
 import { TServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { AccountVerifyBody } from './request/account.verify.request.js';
 import { AccountResponse, toAccountResponse } from './response/account.response.js';

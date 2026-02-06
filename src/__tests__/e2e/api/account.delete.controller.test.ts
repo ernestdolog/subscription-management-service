@@ -22,7 +22,7 @@ import {
 } from '#app/modules/contact-detail/domain/index.js';
 import { AccountEntityRelationType } from '#app/modules/account/domain/index.js';
 import { AccountResponse } from '#app/modules/account/http/v1/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { getTypeOrmAccountRepository } from '#app/modules/account/infrastructure/index.js';
 import { getTypeOrmAccountInvitationRepository } from '#app/modules/account/infrastructure/account-invitation.typeorm.repository.js';
 import { getTypeOrmContactDetailRepository } from '#app/modules/contact-detail/infrastructure/contact-detail.typeorm.repository.js';

@@ -6,24 +6,18 @@ import { appConfig } from '#app/configs/index.js';
 import { kafkaPayloadFactory } from '#app/__tests__/factories/kafka-payload.factory.js';
 import { Kafka } from 'kafkajs';
 import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
-import { ConsumerDaemon } from '#app/consumer/consumer.daemon.js';
+import { EventListenerDaemon } from '#app/event-listener/event-listener.daemon.js';
 import { events } from '#app/shared/kafka/index.js';
-import { SubscriptionUpdatedEventHandler } from '#app/modules/subscription/application/subscription.updated.event-handler.js';
+import { SubscriptionUpdatedListener } from '#app/modules/subscription/application/listeners/subscription-updated.listener.js';
 
-describe('SubscriptionUpdatedEventHandler', async () => {
+describe('SubscriptionUpdatedListener', async () => {
     before(async () => {
-        /**
-         * Hit out Kafka client:
-         */
         Kafka.prototype.consumer = (() => ({ commitOffsets: () => {} })) as never;
     });
 
     it('successfully consume events.v1.SubscriptionsSubscriptionUpdatedEvent', async testContext => {
-        const runSubscriptionUpdatedHandlerMock = testContext.mock.method(
-            SubscriptionUpdatedEventHandler.prototype,
-            'run',
-        );
-        assert.strictEqual(runSubscriptionUpdatedHandlerMock.mock.calls.length, 0);
+        const listenMock = testContext.mock.method(SubscriptionUpdatedListener.prototype, 'listen');
+        assert.strictEqual(listenMock.mock.calls.length, 0);
 
         const event = new events.v1.SubscriptionsSubscriptionUpdatedEvent({
             type: EventType.UPDATE,
@@ -38,21 +32,12 @@ describe('SubscriptionUpdatedEventHandler', async () => {
         });
         const kafkaPayload = kafkaPayloadFactory(event);
 
-        const consumer = new ConsumerDaemon(appConfig);
+        const consumer = new EventListenerDaemon(appConfig);
         await (consumer as any).onEvent(kafkaPayload);
 
-        /**
-         * responsible service called once
-         */
-        assert.strictEqual(runSubscriptionUpdatedHandlerMock.mock.calls.length, 1);
-        /**
-         * with the event
-         */
-        const runSubscriptionUpdatedEventHandlerCall =
-            runSubscriptionUpdatedHandlerMock.mock.calls[0];
-        assert.equal(
-            JSON.stringify(runSubscriptionUpdatedEventHandlerCall.arguments[0]),
-            JSON.stringify(event),
-        );
+        assert.strictEqual(listenMock.mock.calls.length, 1);
+        const listenCall = listenMock.mock.calls[0];
+        assert.equal(listenCall.arguments[0].type, EventType.UPDATE);
+        assert.equal(listenCall.arguments[0].entityType, EventEntityType.SUBSCRIPTION);
     });
 });

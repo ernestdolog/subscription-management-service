@@ -10,9 +10,9 @@ import { appConfig } from '#app/configs/index.js';
 import { Application } from '#app/application.js';
 import { User } from '#app/shared/authorization/tool/index.js';
 import { getAuthHeaders } from './api-client.authentication.js';
-import { HttpServerDaemon } from '#app/http/http-server.daemon.js';
+import { ApiServerDaemon } from '#app/api-server/api-server.daemon.js';
 
-const application = new Application({ appConfig, daemons: [new HttpServerDaemon(appConfig)] });
+const application = new Application({ appConfig, daemons: [new ApiServerDaemon(appConfig)] });
 
 before(async () => {
     await application.boot();

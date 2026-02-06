@@ -6,7 +6,7 @@ import { subscriptionFactory } from '#app/__tests__/factories/subscription.facto
 import { faker } from '@faker-js/faker';
 import { userFactory } from '#app/__tests__/factories/user.factory.js';
 import { User } from '#app/shared/authorization/tool/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { AccountCreateBody } from '#app/modules/account/http/v1/request/account.create.request.js';
 import { AccountResponse } from '#app/modules/account/http/v1/index.js';
 import { UserCreateHandler } from '#app/modules/authentication/application/user.create.handler.js';

@@ -10,7 +10,7 @@ import { contactDetailFactory } from '#app/__tests__/factories/contact-detail.fa
 import { contactDetailEntityRelationFactory } from '#app/__tests__/factories/contact-detail-entity-relation.factory.js';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { LogoutCommand, UpdateUserCommand } from '#app/shared/aws-cognito/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import {
     ContactDetailEntityRelationType,
     ContactDetailTag,
