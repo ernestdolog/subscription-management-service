@@ -1,20 +1,15 @@
-/**
- * Http Server (Runnable)
- * ======================
- * Starts HTTP server with all the bells and whistles
- */
 import { Application } from '#app/application.js';
 import { appConfig, IAppConfig } from '#app/configs/index.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { dataSource } from './configs/typeorm.config.js';
-import { HttpServerDaemon } from '#app/http/http-server.daemon.js';
+import { ApiServerDaemon } from '#app/api-server/api-server.daemon.js';
 import { initializeKafkaProducerClient } from './shared/kafka/index.js';
 
 (async () => {
     getLogger().info('Booting app...');
     const app = new Application<IAppConfig>({
         appConfig,
-        daemons: [new HttpServerDaemon(appConfig)],
+        daemons: [new ApiServerDaemon(appConfig)],
     });
     getLogger().info('Booting daemons...');
     await app.boot();
