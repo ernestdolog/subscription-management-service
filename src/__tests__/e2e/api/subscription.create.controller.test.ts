@@ -6,7 +6,7 @@ import { faker } from '@faker-js/faker';
 import { UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { subscriptionCreateEmailSendClient } from '#app/shared/email/subscription-create.email.client.js';
 import { eventProducer } from '#app/shared/producers/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { ContactDetailTag, ContactDetailType } from '#app/modules/contact-detail/domain/index.js';
 import { SubscriptionCreateBody } from '#app/modules/subscription/http/v1/request/subscription.create.request.js';
 import { SubscriptionResponse } from '#app/modules/subscription/http/v1/index.js';

@@ -11,7 +11,7 @@ import { personFactory } from '#app/__tests__/factories/person.factory.js';
 import { subscriptionFactory } from '#app/__tests__/factories/subscription.factory.js';
 import { UserEntityType } from '#app/shared/authorization/tool/index.js';
 import { userFactory } from '#app/__tests__/factories/user.factory.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { AccountEntityRelationType } from '#app/modules/account/domain/account-entity-relation.enum.js';
 import {
     ContactDetailEntityRelationType,

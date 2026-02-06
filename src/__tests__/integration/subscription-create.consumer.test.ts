@@ -6,24 +6,18 @@ import { appConfig } from '#app/configs/app.config.js';
 import { kafkaPayloadFactory } from '#app/__tests__/factories/kafka-payload.factory.js';
 import { Kafka } from 'kafkajs';
 import { EventEntityType, EventType } from '#app/shared/kafka/events/kafka.event.enum.js';
-import { ConsumerDaemon } from '#app/consumer/consumer.daemon.js';
+import { EventListenerDaemon } from '#app/event-listener/event-listener.daemon.js';
 import { events } from '#app/shared/kafka/index.js';
-import { SubscriptionCreatedEventHandler } from '#app/modules/subscription/application/subscription.created.event-handler.js';
+import { SubscriptionCreatedListener } from '#app/modules/subscription/application/listeners/subscription-created.listener.js';
 
-describe('SubscriptionCreatedEventHandler', async () => {
+describe('SubscriptionCreatedListener', async () => {
     before(async () => {
-        /**
-         * Hit out Kafka client:
-         */
         Kafka.prototype.consumer = (() => ({ commitOffsets: () => {} })) as never;
     });
 
     it('successfully consume events.v1.SubscriptionsSubscriptionCreatedEvent', async testContext => {
-        const runSubscriptionCreatedHandlerMock = testContext.mock.method(
-            SubscriptionCreatedEventHandler.prototype,
-            'run',
-        );
-        assert.strictEqual(runSubscriptionCreatedHandlerMock.mock.calls.length, 0);
+        const listenMock = testContext.mock.method(SubscriptionCreatedListener.prototype, 'listen');
+        assert.strictEqual(listenMock.mock.calls.length, 0);
 
         const event = new events.v1.SubscriptionsSubscriptionCreatedEvent({
             type: EventType.CREATE,
@@ -38,21 +32,12 @@ describe('SubscriptionCreatedEventHandler', async () => {
         });
         const kafkaPayload = kafkaPayloadFactory(event);
 
-        const consumer = new ConsumerDaemon(appConfig);
+        const consumer = new EventListenerDaemon(appConfig);
         await (consumer as any).onEvent(kafkaPayload);
 
-        /**
-         * responsible service called once
-         */
-        assert.strictEqual(runSubscriptionCreatedHandlerMock.mock.calls.length, 1);
-        /**
-         * with the event
-         */
-        const runSubscriptionCreatedEventHandlerCall =
-            runSubscriptionCreatedHandlerMock.mock.calls[0];
-        assert.equal(
-            JSON.stringify(runSubscriptionCreatedEventHandlerCall.arguments[0]),
-            JSON.stringify(event),
-        );
+        assert.strictEqual(listenMock.mock.calls.length, 1);
+        const listenCall = listenMock.mock.calls[0];
+        assert.equal(listenCall.arguments[0].type, EventType.CREATE);
+        assert.equal(listenCall.arguments[0].entityType, EventEntityType.SUBSCRIPTION);
     });
 });

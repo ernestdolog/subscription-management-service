@@ -1,19 +1,14 @@
-/**
- * Consumer (Runnable)
- * ===================
- * Starts Kafka consumer with all the bells and whistles
- */
 import { Application } from '#app/application.js';
 import { appConfig, dataSource, IAppConfig } from '#app/configs/index.js';
 import { getLogger } from '#app/shared/logging/index.js';
-import { HealthServerDaemon } from './consumer/health-server.daemon.js';
-import { ConsumerDaemon } from './consumer/consumer.daemon.js';
+import { HealthServerDaemon } from './event-listener/health-server.daemon.js';
+import { EventListenerDaemon } from './event-listener/event-listener.daemon.js';
 
 (async () => {
-    getLogger().info('Booting consumer...');
+    getLogger().info('Booting event listener...');
     const app = new Application<IAppConfig>({
         appConfig,
-        daemons: [new HealthServerDaemon(appConfig), new ConsumerDaemon(appConfig)],
+        daemons: [new HealthServerDaemon(appConfig), new EventListenerDaemon(appConfig)],
     });
     getLogger().info('Booting daemons...');
     await app.boot();

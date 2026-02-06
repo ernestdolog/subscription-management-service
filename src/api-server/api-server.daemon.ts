@@ -1,8 +1,3 @@
-/**
- * Api Server Executable Daemon
- * ============================
- * Contains the implementation of a Http Server.
- */
 import Fastify, { FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -13,12 +8,12 @@ import { fastifyRequestContext } from '@fastify/request-context';
 import { AuthorizationTokenContext } from '#app/shared/authorization/plugins/fastify/index.js';
 import { RequestIdContext } from '#app/shared/logging/plugins/fastify/index.js';
 import { ErrorHandler } from '#app/shared/error/plugins/fastify/index.js';
-import { SWAGGER_SETUP, SWAGGER_UI_SETUP } from '#app/http/swagger/http-server.swagger.js';
+import { SWAGGER_SETUP, SWAGGER_UI_SETUP } from '#app/api-server/swagger/api-server.swagger.js';
 import cors from '@fastify/cors';
 import { Routes } from './routes/rest.routes.js';
-import { querystringParser } from './http-server.query-parser.js';
+import { querystringParser } from './api-server.query-parser.js';
 
-export class HttpServerDaemon extends AbstractDaemon<IAppConfig> {
+export class ApiServerDaemon extends AbstractDaemon<IAppConfig> {
     private httpServer: FastifyInstance;
 
     constructor(protected appConfig: IAppConfig) {

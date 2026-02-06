@@ -6,7 +6,7 @@ import { faker } from '@faker-js/faker';
 import { subscriptionFactory } from '#app/__tests__/factories/subscription.factory.js';
 import { userFactory } from '#app/__tests__/factories/user.factory.js';
 import { eventProducer } from '#app/shared/producers/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { SubscriptionUpdateBody } from '#app/modules/subscription/http/v1/request/subscription.update.request.js';
 import { SubscriptionUpdateResponse } from '#app/modules/subscription/http/v1/index.js';
 

@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import assert from 'node:assert/strict';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { LogoutCommand } from '#app/shared/aws-cognito/index.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { AuthenticationLogoutBody } from '#app/modules/authentication/http/v1/request/authentication.logout.request.js';
 
 describe('AuthenticationLogout', async () => {

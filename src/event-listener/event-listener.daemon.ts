@@ -4,10 +4,14 @@ import { Consumer, EachMessagePayload } from 'kafkajs';
 import { getLogger } from '#app/shared/logging/index.js';
 import { getKafkaClient } from '#app/shared/kafka/client/client.js';
 import { Topic } from '#app/shared/kafka/events/kafka.event.enum.js';
-import { ConsumerPayload } from './consumer.payload.js';
+import { EventProcessor } from './event.processor.js';
 
-export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+export class EventListenerDaemon extends AbstractDaemon<IAppConfig> {
     protected consumer: Consumer;
+    protected processor: EventProcessor;
 
     constructor(protected appConfig: IAppConfig) {
         super(appConfig);
@@ -17,9 +21,11 @@ export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
             heartbeatInterval: this.appConfig.events.kafka.consumer.heartbeatInterval,
             retry: {
                 initialRetryTime: 100,
-                retries: 0,
+                retries: 8,
+                maxRetryTime: 30000,
             },
         });
+        this.processor = new EventProcessor();
     }
 
     async boot(): Promise<void> {
@@ -45,37 +51,49 @@ export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
     }
 
     private async onEvent(payload: EachMessagePayload) {
-        const consumerPayload = new ConsumerPayload(payload);
-
-        const l = getLogger().child({
-            cls: 'ConsumerDaemon',
-            fn: 'onEvent',
-            ctx: {
-                topic: payload.topic,
-                partition: payload.partition,
-                value: consumerPayload.data,
-                offset: payload.message.offset,
-                event: consumerPayload.event,
-            },
+        const log = getLogger().child({
+            cls: 'EventListenerDaemon',
+            topic: payload.topic,
+            partition: payload.partition,
+            offset: payload.message.offset,
         });
-        l.info('receive');
 
-        if (!consumerPayload.event) return this.onUnSuccessful(l.warn('cant parse event'), payload);
-        if (!consumerPayload.event.isValid)
-            return this.onUnSuccessful(l.warn('invalid event'), payload);
-        if (!consumerPayload.handler)
-            return this.onUnSuccessful(l.warn('no handler found'), payload);
+        const result = await this.processWithRetry(payload, log);
 
-        try {
-            await consumerPayload.handler.run(consumerPayload.event);
-            await this.onSuccessful(l.info('success'), payload);
-        } catch (error) {
-            return this.onUnSuccessful(l.warn('handler not successful ', error), payload);
+        if (result.handled) {
+            log.info('Event processed');
+        } else {
+            log.child({ error: result.error?.message }).warn('Event failed');
         }
+
+        await this.commit(payload);
     }
 
-    private async onSuccessful(callback: void, payload: EachMessagePayload) {
-        callback;
+    private async processWithRetry(payload: EachMessagePayload, log: ReturnType<typeof getLogger>) {
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            await payload.heartbeat();
+            const result = await this.processor.process(payload);
+
+            if (result.handled || !result.retryable) {
+                return result;
+            }
+
+            if (attempt < MAX_RETRIES) {
+                const delay = this.backoff(attempt);
+                log.child({ attempt, delay }).warn('Retrying');
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+
+        return { handled: false, retryable: false };
+    }
+
+    private backoff(attempt: number): number {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        return Math.min(delay + Math.random() * delay * 0.3, 30000);
+    }
+
+    private async commit(payload: EachMessagePayload): Promise<void> {
         await this.consumer.commitOffsets([
             {
                 topic: payload.topic,
@@ -83,18 +101,6 @@ export class ConsumerDaemon extends AbstractDaemon<IAppConfig> {
                 offset: (Number(payload.message.offset) + 1).toString(),
             },
         ]);
-        /**
-         * @fyi
-         * this slows down events as long as we await the heartbeat
-         * in case we need faster consumption, look here
-         */
         await payload.heartbeat();
-        return;
-    }
-
-    private async onUnSuccessful(callback: void, payload: EachMessagePayload) {
-        callback;
-        await payload.heartbeat();
-        return;
     }
 }

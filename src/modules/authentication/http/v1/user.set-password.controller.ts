@@ -1,4 +1,4 @@
-import { API_PREFIX_V1, TRequest, TResponse } from '#app/http/index.js';
+import { API_PREFIX_V1, TRequest, TResponse } from '#app/api-server/index.js';
 import { TServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { UserResponse } from './response/user.response.js';
 import { UserSetPasswordBody } from './request/user.set-password.request.js';

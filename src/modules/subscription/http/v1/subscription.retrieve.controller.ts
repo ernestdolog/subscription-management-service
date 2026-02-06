@@ -1,4 +1,4 @@
-import { API_PREFIX_V1, TRequest, TResponse } from '#app/http/index.js';
+import { API_PREFIX_V1, TRequest, TResponse } from '#app/api-server/index.js';
 import { TServerError } from '#app/shared/error/plugins/fastify/index.js';
 import { auth } from '#app/shared/authorization/plugins/fastify/index.js';
 import { SubscriptionResponse, toSubscriptionResponse } from './response/subscription.response.js';

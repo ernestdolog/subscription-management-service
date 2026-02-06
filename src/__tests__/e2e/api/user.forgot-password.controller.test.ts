@@ -6,7 +6,7 @@ import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-
 import { GetUserCommand, InternalForgotPasswordCommand } from '#app/shared/aws-cognito/index.js';
 import { CognitoUser } from '#app/shared/authorization/tool/index.js';
 import { userFactory } from '#app/__tests__/factories/user.factory.js';
-import { API_PREFIX_V1 } from '#app/http/http-server.constants.js';
+import { API_PREFIX_V1 } from '#app/api-server/api-server.constants.js';
 import { UserForgotPasswordBody } from '#app/modules/authentication/http/v1/request/user.forgot-password.request.js';
 import { UserResponse } from '#app/modules/authentication/http/v1/index.js';
 
