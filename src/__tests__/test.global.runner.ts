@@ -23,6 +23,8 @@ const stream = run({
         './src/__tests__/unit/get-user.types.test.ts',
         './src/__tests__/unit/logger.unit.test.ts',
         './src/__tests__/unit/module-boundaries.unit.test.ts',
+        './src/__tests__/unit/email.value.unit.test.ts',
+        './src/__tests__/unit/token.value.unit.test.ts',
 
         './src/__tests__/integration/abstract.handler.integration.test.ts',
         './src/__tests__/integration/user.create.service.integration.test.ts',

@@ -1,4 +1,5 @@
 export { ContactDetailEntity } from './contact-detail.entity.js';
+export { Email } from './email.value.js';
 export { ContactDetailEntityRelationEntity } from './contact-detail-entity-relation.entity.js';
 export type { ContactDetailRepository } from './contact-detail.repository.js';
 export { getContactDetailRepository } from './contact-detail.repository.js';

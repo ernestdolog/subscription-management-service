@@ -146,13 +146,20 @@ reading two entities side-by-side sees the intent, not a contradiction.
 ## Exemplar 2 — Value Objects: `Email` and `Token`
 
 **Why:** the domain that most wants VOs uses raw `string` — `ContactDetailEntity.detail` (the email) and
-`AccountInvitationEntity.token`. Two small VOs demonstrate the two classic flavours: a **self-validating**
-value (`Email`) and an **opaque generated credential** (`Token`, owned by the aggregate in Exemplar 1).
+`AccountInvitationEntity.token`. Two small VOs demonstrate the two classic flavours **and two different
+lifecycles**: a **self-validating boundary value** (`Email`) and an **opaque generated credential**
+(`Token`, owned by the aggregate in Exemplar 1).
 
-Both VOs carry **two** construction paths, mirroring the aggregate: a validating `create()` at the domain
-boundary, and a **no-revalidation `reconstitute()`** for trusted persisted data (used by the DAO `toEntity`
-getter — the only read path). A validating rehydrate would re-run the regex on every DB read and would
-contradict Exemplar 1's "reconstitute doesn't re-validate" rule.
+- `Email` is a **boundary VO**: parsed from a raw string at the create/lookup edge and immediately reduced
+  back to a normalized `string` for persistence + the wire. It is **not** the `ContactDetailEntity.detail`
+  field type — `detail` is a **discriminated** column (keyed by `ContactDetailType`, part of the
+  `[entityId, entityType, type, tag, detail]` unique index) that is only _sometimes_ an email, so typing the
+  field `Email` would be incorrect and would ripple a VO through every cross-module reader. So `Email` needs
+  only `create()` (+ `equals`/`toString`); there is no persisted-`Email` field to rehydrate.
+- `Token` is a **persisted VO**: it lives on the aggregate as `token: Token`, so it needs a validating
+  `create()` (write path) **and** a no-revalidation `reconstitute()` for the DAO `toEntity` read path — a
+  validating rehydrate would re-run validation on every trusted DB read, contradicting Exemplar 1's
+  "reconstitute doesn't re-validate" rule.
 
 **`Email`** — immutable, validates + normalizes on `create`, equality-by-value:
 
@@ -164,13 +171,12 @@ export class Email {
     static create(raw: string): Email {
         const normalized = raw.trim().toLowerCase();
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
-            throw new InternalServerError(CommonError.VALIDATION, { resource: 'Email', value: raw });
+            throw new InternalServerError(CommonError.VALIDATION, {
+                resource: 'Email',
+                value: raw,
+            });
         }
         return new Email(normalized);
-    }
-    /** Trusted rehydrate — no re-validation (persisted rows are already normalized; see the SoT note). */
-    static reconstitute(trusted: string): Email {
-        return new Email(trusted);
     }
     equals(other: Email): boolean {
         return this.value === other.value;
@@ -190,12 +196,13 @@ export class Email {
   and the unique index won't catch them either. Both the stored `ContactDetailDao.detail` and the
   `isEmailAlreadyTaken` argument must be the **normalized** value. (The `isEmailAlreadyTaken` pre-check stays a
   non-atomic TOCTOU advisory — the real guarantee is the unique index; note that, don't try to fix it here.)
-- **Keep it demonstrative, not invasive:** the TypeBox **wire** types stay `string` — convert at the domain
-  boundary. Enumerate the `.toString()` crossings so nothing serializes a class instance: `preserveNew` spread
-  (`contact-detail.typeorm.repository.ts:58`), the `.exists({ where: { detail } })` lookup (`:25-27`), the TypeBox
-  response serializer `contact-detail.response.ts:31-42` (field is `Type.String()` — must receive `detail.toString()`,
-  not the `Email`), and the cross-module reads at `subscription.create.handler.ts:189-190` (SES `to:`/link) and
-  `verify.handler.ts:82`. (`detail` is a public field read across modules, so the change is wider than "create/lookup".)
+- **Keep it demonstrative, not invasive:** because `detail` stays a `string` on the entity / DAO / wire, the
+  VO is confined to the create + lookup boundary — there is **no** cross-module ripple. The SES reads at
+  `subscription.create.handler.ts:189-190`, the `verify.handler.ts:82` read, and the
+  `contact-detail.response.ts` TypeBox serializer all keep reading `detail: string`, untouched. The only edits:
+  `Email.create(command.email)` in the create handler (parse + normalize once), `isEmailAlreadyTaken(Email)`
+  (interface + impl, querying `email.toString()`), and storing the normalized `email.toString()`. A
+  `CommonError.VALIDATION` (400) message is added for the VO's parse failure (none existed).
 
 **`Token`** — generated in the domain, consumed by `AccountInvitationEntity.create()`:
 
@@ -293,6 +300,7 @@ explicitly — it's the actual justification for _not_ building relay-side dedup
 
 **⚠️ Note — live hazards this does NOT fix (do not let a reader infer end-to-end write safety):** this exemplar
 kills the **Kafka event** dual-write only. Two worse dual-writes stay **live**:
+
 - **Cognito** (`user.create.handler.ts:42,50`, driven from `person-account.verify.handler.ts`) — two synchronous,
   non-transactional identity calls **inside** the DB tx; a rollback leaves an **orphaned Cognito user** (and the
   password-set is a second call that can independently fail → passwordless user). Cognito can't be outboxed (the
@@ -326,7 +334,7 @@ two module cycles are unpoliced; a 6th cross-module call would pass CI silently.
 - **Rules:**
     1. `no-cross-module-domain` — `modules/<A>/domain/**` must not import `modules/<B>/**`.
     2. `no-app-to-foreign-app` — `modules/<A>/application/**` must not import `modules/<B>/application/**` (the 3 `authentication` calls).
-    3. `no-app-to-foreign-infrastructure` — `modules/<A>/application/**` must not import `modules/<B>/infrastructure/**`. **⚠️ Corrected:** the rule must **allow** `application → foreign-`domain`` — importing a foreign module's `domain/index.js` (the repository _interface_ + `getXRepository` factory) **IS** the ports/adapters wiring here (6 handlers do it: `subscription.create`, `account.create`, `account.delete`, `account.update-me`, `person-account.send-invitation`, `person-account.verify`). A rule forbidding app→foreign-`domain` would bury the intended design in warnings and train readers to ignore the tool. Forbid only reaching **past the port** into a concrete foreign `.typeorm.repository`/`.dao` (i.e. `infrastructure/**`).
+    3. `no-app-to-foreign-infrastructure` — `modules/<A>/application/**` must not import `modules/<B>/infrastructure/**`. **⚠️ Corrected:** the rule must **allow** `application → foreign-`domain``— importing a foreign module's`domain/index.js`(the repository _interface_ +`getXRepository`factory) **IS** the ports/adapters wiring here (6 handlers do it:`subscription.create`, `account.create`, `account.delete`, `account.update-me`, `person-account.send-invitation`, `person-account.verify`). A rule forbidding app→foreign-`domain`would bury the intended design in warnings and train readers to ignore the tool. Forbid only reaching **past the port** into a concrete foreign`.typeorm.repository`/`.dao`(i.e.`infrastructure/\*\*`).
     4. `no-module-cycles` — `{ to: { circular: true } }`.
 - **⚠️ Sequencing:** the codebase currently **violates** several of these. Ship the rules at **`warn`** so CI stays
   green; the value is the **guardrail against new violations** + a visible backlog. **Do not** use an explicit
@@ -335,7 +343,7 @@ two module cycles are unpoliced; a 6th cross-module call would pass CI silently.
       `account/domain/account.type.ts:1`, `person/domain/person.entity.ts:1`, `subscription/domain/subscription.entity.ts:1`.
     - Rule 2: the 3 app→app edges into `authentication`.
     - Rule 4: the two ORM cycles (`person↔contact-detail`, `account↔subscription`).
-  A `no-cycle` at `error` would require breaking the cross-module `@OneToMany` relations first (real refactor, out of scope).
+      A `no-cycle` at `error` would require breaking the cross-module `@OneToMany` relations first (real refactor, out of scope).
 
 **Tests:** a meta-test — a fixture import that crosses a forbidden boundary makes `depcruise` exit non-zero.
 
@@ -384,14 +392,14 @@ code-simplicity (tight leash). All are **precision corrections, not descopes** �
 in scope. The simplicity reviewer produced only in-architecture step-trims (reuse the `runInTransaction` seam;
 no-revalidation VO rehydrate; `node:crypto` import) + an explicit "no redundant abstraction to cut" — leash held.
 
-| # | Where | Correction |
-|---|---|---|
-| 1 | Outbox | Publish sites pass the **event**, not `evt.get()`; relay drains via `producer.send(record)`, not `eventProducer.publish` (type-incompatible). |
-| 2 | 1 + 2 | **`toDao` does not exist** — introduce it as the mirror of `get toEntity()`; `.toString()` at every VO→column crossing. |
-| 3 | 1 | `revoke()` via private ctor (not `reconstitute({...this})` — that drags a `Token` + relation into a raw row); `preserve` field-maps **scalar columns only**. |
-| 4 | 1 | Interface is in `domain/`, not `infrastructure/`; the `Partial<AccountEntity>` mistype is in **both** interface + impl. |
-| 5 | 2 | **Email normalization ↔ uniqueness SoT** — normalize on write **and** lookup; add no-revalidation `reconstitute`; drop the validating `Token.fromString`. |
-| 6 | 4 | **Rule 3 rewritten** — allow app→foreign-`domain` (the intended port), forbid only app→foreign-`infrastructure`. |
-| 7 | 3 | **Migration safety** — backfill/de-dupe the frozen token + drop the DB DEFAULT **before/with** a **partial** `UNIQUE(token) WHERE deleted_at IS NULL`, atomic with the `Token.create()` cutover; prod dup pre-check. |
-| 8 | 3 | Relay needs `FOR UPDATE SKIP LOCKED` + a `failed` terminal state + `stop()`; cite the idempotent consumer; resolve the outbox repo from the tx-owning manager (shared-`context` footgun). |
-| — | 3/2/1 | Reframe "kills the dual-write" → **event** dual-write (Cognito/SES stay live); flag `.value.ts` + `enqueue` as new coinages; event runnable must init the Kafka producer; outbox DAO under `modules/**/infrastructure/`; `node:crypto` import; fixtures need distinct tokens; Rule 1 has 3 unlisted violations → commit to `warn`. |
+| #   | Where  | Correction                                                                                                                                                                                                                                                                                                                         |
+| --- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Outbox | Publish sites pass the **event**, not `evt.get()`; relay drains via `producer.send(record)`, not `eventProducer.publish` (type-incompatible).                                                                                                                                                                                      |
+| 2   | 1 + 2  | **`toDao` does not exist** — introduce it as the mirror of `get toEntity()`; `.toString()` at every VO→column crossing.                                                                                                                                                                                                            |
+| 3   | 1      | `revoke()` via private ctor (not `reconstitute({...this})` — that drags a `Token` + relation into a raw row); `preserve` field-maps **scalar columns only**.                                                                                                                                                                       |
+| 4   | 1      | Interface is in `domain/`, not `infrastructure/`; the `Partial<AccountEntity>` mistype is in **both** interface + impl.                                                                                                                                                                                                            |
+| 5   | 2      | **Email normalization ↔ uniqueness SoT** — normalize on write **and** lookup; add no-revalidation `reconstitute`; drop the validating `Token.fromString`.                                                                                                                                                                         |
+| 6   | 4      | **Rule 3 rewritten** — allow app→foreign-`domain` (the intended port), forbid only app→foreign-`infrastructure`.                                                                                                                                                                                                                   |
+| 7   | 3      | **Migration safety** — backfill/de-dupe the frozen token + drop the DB DEFAULT **before/with** a **partial** `UNIQUE(token) WHERE deleted_at IS NULL`, atomic with the `Token.create()` cutover; prod dup pre-check.                                                                                                               |
+| 8   | 3      | Relay needs `FOR UPDATE SKIP LOCKED` + a `failed` terminal state + `stop()`; cite the idempotent consumer; resolve the outbox repo from the tx-owning manager (shared-`context` footgun).                                                                                                                                          |
+| —   | 3/2/1  | Reframe "kills the dual-write" → **event** dual-write (Cognito/SES stay live); flag `.value.ts` + `enqueue` as new coinages; event runnable must init the Kafka producer; outbox DAO under `modules/**/infrastructure/`; `node:crypto` import; fixtures need distinct tokens; Rule 1 has 3 unlisted violations → commit to `warn`. |

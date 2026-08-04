@@ -3,7 +3,7 @@ import { User } from '#app/shared/authorization/tool/authorization.user.entity.j
 import { FindOptionsWhere, FindOptionsRelations, EntityManager } from 'typeorm';
 import { ContactDetailDao } from './contact-detail.dao.js';
 import { addUserViewPermissionFiltertoContactDetail } from './contact-detail.user.is-viewer.js';
-import { ContactDetailEntity, ContactDetailType } from '../domain/index.js';
+import { ContactDetailEntity, ContactDetailType, Email } from '../domain/index.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 
 const getTypeOrmRepository = () =>
@@ -21,9 +21,9 @@ const getTypeOrmRepository = () =>
             addUserViewPermissionFiltertoContactDetail(props.user, queryBuilder);
             return queryBuilder.getOne();
         },
-        isEmailAlreadyTaken(email: string): Promise<boolean> {
+        isEmailAlreadyTaken(email: Email): Promise<boolean> {
             return this.exists({
-                where: { type: ContactDetailType.EMAIL, detail: email },
+                where: { type: ContactDetailType.EMAIL, detail: email.toString() },
             });
         },
         async getOne(id: string, user: User): Promise<ContactDetailEntity | undefined> {

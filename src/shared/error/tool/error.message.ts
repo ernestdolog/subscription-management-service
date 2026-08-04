@@ -31,6 +31,11 @@ export class CommonError extends ErrorMessage {
         name: 'CONFLICT',
         message: 'Same :resource :value already exists.',
     };
+    static VALIDATION = {
+        httpCode: 400,
+        name: 'VALIDATION',
+        message: 'Invalid :resource: :value',
+    };
     static NOT_CREATE_REQUEST = {
         httpCode: 422,
         name: 'UNPROCESSABLE_CONTENT',

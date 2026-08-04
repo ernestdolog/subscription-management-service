@@ -16,6 +16,7 @@ import {
     ContactDetailEntityType,
     ContactDetailTag,
     ContactDetailType,
+    Email,
 } from '#app/modules/contact-detail/domain/index.js';
 import { AccountEntity } from '#app/modules/account/domain/account.entity.js';
 import { PersonEntityRelationType } from '#app/modules/person/domain/index.js';
@@ -66,13 +67,19 @@ export class SubscriptionCreateHandler extends AbstractHandler<
         const l = this.l.child({ ctx: command });
         l.info('start');
 
-        await this.validate(command);
+        // Parse the raw email into a self-validating VO ONCE at the boundary; the
+        // normalized value is then used for BOTH the uniqueness check and storage.
+        const email = Email.create(command.email);
+        await this.validate(email);
 
         const subscription = await this.subscriptionRepository.preserveNew({
             name: command.subscriptionName,
         });
 
-        const account = await this.createAccount(command, subscription.id);
+        const account = await this.createAccount(
+            { ...command, email: email.toString() },
+            subscription.id,
+        );
         subscription.addAccount(account);
 
         const invitation = await this.createInvitation(account);
@@ -85,14 +92,12 @@ export class SubscriptionCreateHandler extends AbstractHandler<
         return subscription;
     }
 
-    private async validate(command: SubscriptionCreateCommand) {
-        const isEmailAlreadyTaken = await this.contactDetailRepository.isEmailAlreadyTaken(
-            command.email,
-        );
+    private async validate(email: Email) {
+        const isEmailAlreadyTaken = await this.contactDetailRepository.isEmailAlreadyTaken(email);
         if (isEmailAlreadyTaken) {
             throw new InternalServerError(CommonError.CONFLICT, {
                 resource: ContactDetailType.EMAIL,
-                value: command.email,
+                value: email.toString(),
             });
         }
     }
