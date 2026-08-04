@@ -26,6 +26,7 @@ const stream = run({
         './src/__tests__/unit/email.value.unit.test.ts',
         './src/__tests__/unit/token.value.unit.test.ts',
         './src/__tests__/unit/account-invitation.entity.unit.test.ts',
+        './src/__tests__/unit/outbox-record.unit.test.ts',
 
         './src/__tests__/integration/abstract.handler.integration.test.ts',
         './src/__tests__/integration/user.create.service.integration.test.ts',

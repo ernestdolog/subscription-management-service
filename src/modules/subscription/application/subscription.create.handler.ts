@@ -9,7 +9,7 @@ import { InternalServerError } from '#app/shared/error/plugins/fastify/index.js'
 import { SubscriptionEntityEventMapper } from '../domain/index.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { getRequestId } from '#app/shared/logging/plugins/fastify/fastify.request-id.context.js';
-import { eventProducer } from '#app/shared/producers/index.js';
+import { getOutboxRepository, OutboxMessageRepository } from '#app/modules/outbox/domain/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
 import {
     ContactDetailEntityRelationType,
@@ -86,7 +86,12 @@ export class SubscriptionCreateHandler extends AbstractHandler<
 
         await this.sendEmail(account, invitation);
 
-        await eventProducer.publish(SubscriptionEntityEventMapper.toCreatedEvent(subscription));
+        // Enqueue into the transactional outbox INSIDE the business tx (no publish-in-tx
+        // dual-write). `.get()` composes + validates the ProducerRecord here, so an invalid
+        // event rolls the write back instead of publishing garbage.
+        await this.outboxRepository.enqueue(
+            SubscriptionEntityEventMapper.toCreatedEvent(subscription).get(),
+        );
 
         l.info('success');
         return subscription;
@@ -244,6 +249,10 @@ export class SubscriptionCreateHandler extends AbstractHandler<
 
     private get contactDetailEntityRelationRepository(): ContactDetailEntityRelationRepository {
         return getContactDetailEntityRelationRepository(this.manager);
+    }
+
+    private get outboxRepository(): OutboxMessageRepository {
+        return getOutboxRepository(this.manager);
     }
 
     private get l() {

@@ -5,7 +5,7 @@ import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getLogger } from '#app/shared/logging/index.js';
 import { SubscriptionEntityEventMapper } from '../domain/index.js';
-import { eventProducer } from '#app/shared/producers/index.js';
+import { getOutboxRepository, OutboxMessageRepository } from '#app/modules/outbox/domain/index.js';
 import { SubscriptionEntity } from '../domain/subscription.entity.js';
 import { getSubscriptionRepository, SubscriptionRepository } from '../domain/index.js';
 
@@ -39,7 +39,10 @@ export class SubscriptionUpdateHandler extends AbstractHandler<
         const updatedSubscription = subscription.update(command, command.user);
         await this.subscriptionRepository.preserve(command.id, updatedSubscription);
 
-        await eventProducer.publish(SubscriptionEntityEventMapper.toUpdatedEvent(subscription));
+        // Enqueue into the transactional outbox INSIDE the business tx (no publish-in-tx dual-write).
+        await this.outboxRepository.enqueue(
+            SubscriptionEntityEventMapper.toUpdatedEvent(subscription).get(),
+        );
 
         l.info('success');
         return subscription;
@@ -47,6 +50,10 @@ export class SubscriptionUpdateHandler extends AbstractHandler<
 
     private get subscriptionRepository(): SubscriptionRepository {
         return getSubscriptionRepository(this.manager);
+    }
+
+    private get outboxRepository(): OutboxMessageRepository {
+        return getOutboxRepository(this.manager);
     }
 
     private get l() {
