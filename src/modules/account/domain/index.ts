@@ -1,6 +1,7 @@
 export { AccountEntity } from './account.entity.js';
 export { AccountEntityRelationEntity } from './account-entity-relation.entity.js';
 export { AccountInvitationEntity } from './account-invitation.entity.js';
+export { Token } from './token.value.js';
 export type { AccountRepository } from './account.repository.js';
 export type { AccountEntityRelationRepository } from './account-entity-relation.repository.js';
 export type { AccountInvitationRepository } from './account-invitation.repository.js';

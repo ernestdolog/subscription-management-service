@@ -8,5 +8,7 @@ if (esMain(import.meta)) {
         import('./api-server.runnable.js');
     } else if (runnable === 'event') {
         import('./event-listener.runnable.js');
+    } else if (runnable === 'relay') {
+        import('./outbox-relay.runnable.js');
     }
 }

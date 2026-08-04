@@ -3,7 +3,7 @@ import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { CommonError } from '#app/shared/error/index.js';
 import { InternalServerError } from '#app/shared/error/plugins/fastify/server.error.js';
 import { getTypeOrmContactDetailRepository } from '../infrastructure/index.js';
-import { ContactDetailEntity } from './index.js';
+import { ContactDetailEntity, Email } from './index.js';
 
 export interface ContactDetailRepository {
     getOne(id: string, user: User): Promise<ContactDetailEntity | undefined>;
@@ -13,7 +13,7 @@ export interface ContactDetailRepository {
         user: User,
     ): Promise<ContactDetailEntity>;
     preserve(id: string, update: Partial<ContactDetailEntity>): Promise<void>;
-    isEmailAlreadyTaken(email: string): Promise<boolean>;
+    isEmailAlreadyTaken(email: Email): Promise<boolean>;
     softDelete(
         entity: Partial<ContactDetailEntity> & Pick<ContactDetailEntity, 'id'>,
         user: User,

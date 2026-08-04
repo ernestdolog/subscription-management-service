@@ -18,6 +18,7 @@
         "oxlint:fix": "oxlint --fix",
         "lint": "npm run oxlint && npm run prettier:check",
         "lint:fix": "npm run oxlint:fix && npm run prettier:fix",
+        "depcruise": "depcruise src --config .dependency-cruiser.cjs",
         "ts:verify": "tsgo --noEmit",
         "typeorm": "tsx ./node_modules/typeorm/cli.js -d ./src/configs/typeorm.config.ts",
         "typeorm:migrate": "npm run typeorm -- migration:run",
@@ -47,6 +48,7 @@
         "@typescript/native-preview": "^7.0.0-dev.20251210.1",
         "commitlint": "^19.7.1",
         "cross-fetch": "^4.0.0",
+        "dependency-cruiser": "^18.1.1",
         "oxlint": "^1.0.0",
         "prettier": "^3.2.4",
         "typescript": "^5.7.3"

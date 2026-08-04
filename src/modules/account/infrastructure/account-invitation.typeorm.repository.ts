@@ -2,10 +2,9 @@ import { dataSource } from '#app/configs/index.js';
 import { User } from '#app/shared/authorization/tool/authorization.user.entity.js';
 import { EntityManager, FindOptionsRelations, FindOptionsWhere } from 'typeorm';
 import { AccountInvitationDao } from './account-invitation.dao.js';
-import { randomUUID } from 'node:crypto';
 import { addUserViewPermissionFilterToAccountInvitation } from './account-invitation.user.is-viewer.js';
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
-import { AccountEntity, AccountInvitationEntity } from '../domain/index.js';
+import { AccountInvitationEntity } from '../domain/index.js';
 
 const getTypeOrmRepository = () =>
     dataSource.getRepository<AccountInvitationDao>(AccountInvitationDao).extend({
@@ -25,16 +24,22 @@ const getTypeOrmRepository = () =>
             return queryBuilder.getOne();
         },
         async provide(accountId: string, user: User): Promise<AccountInvitationEntity> {
-            const token = randomUUID();
-            const isValid = true;
-            const invitation = this.create({
+            // The creation invariant (fresh Token + isValid) now lives in the domain factory.
+            const invitation = AccountInvitationEntity.create({
                 accountId,
-                token,
-                isValid,
                 createdBy: user.accountId,
-                updatedBy: user.accountId,
             });
-            const res = await this.save(invitation);
+            // Map the aggregate to its DAO for persistence. There is no generic toDao in
+            // this repo; field-map inline, the mirror of the DAO's `get toEntity()`.
+            const dao = this.create({
+                id: invitation.id,
+                accountId: invitation.accountId,
+                token: invitation.token,
+                isValid: invitation.isValid,
+                createdBy: invitation.createdBy,
+                updatedBy: invitation.updatedBy,
+            });
+            const res = await this.save(dao);
             return res.toEntity;
         },
         async getOne(token: string): Promise<AccountInvitationEntity | undefined> {
@@ -50,8 +55,11 @@ const getTypeOrmRepository = () =>
             });
             return existing?.toEntity;
         },
-        async preserve(id: string, input: Partial<AccountEntity>) {
-            await this.update({ id }, input);
+        async preserve(id: string, input: Partial<AccountInvitationEntity>) {
+            // Field-map to SCALAR columns only — never hand the whole aggregate (Token VO +
+            // nested `account` relation) to `.update()`; that would try to persist objects
+            // into varchar columns. `revoke()` only changes these two.
+            await this.update({ id }, { isValid: input.isValid, updatedBy: input.updatedBy });
         },
     });
 
