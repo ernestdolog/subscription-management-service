@@ -4,12 +4,11 @@ import { InternalServerError } from '#app/shared/error/plugins/fastify/server.er
 import { AbstractTransactionManager } from '#app/shared/transaction/index.js';
 import { getTypeOrmAccountInvitationRepository } from '../infrastructure/account-invitation.typeorm.repository.js';
 import { AccountInvitationEntity } from './account-invitation.entity.js';
-import { AccountEntity } from './index.js';
 
 export interface AccountInvitationRepository {
     getOne(token: string): Promise<AccountInvitationEntity | undefined>;
     provide(accountId: string, user: User): Promise<AccountInvitationEntity>;
-    preserve(id: string, input: Partial<AccountEntity>): Promise<void>;
+    preserve(id: string, input: Partial<AccountInvitationEntity>): Promise<void>;
 }
 
 export function getAccountInvitationRepository(

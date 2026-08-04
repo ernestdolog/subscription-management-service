@@ -62,7 +62,7 @@ factory fixes. It demonstrates the full pattern: private ctor, validating `creat
 // account-invitation.entity.ts  (sketch)
 import { randomUUID } from 'node:crypto'; // repo convention — NOT global crypto.randomUUID()
 
-/** Raw persistence shape — token is a STRING here (the DB column), lifted to a Token VO on reconstitute. */
+/** Raw persistence shape — plain scalars/dates/relation (token is the string DB column). */
 type AccountInvitationData = {
     id: string;
     accountId: string;
@@ -77,7 +77,7 @@ export class AccountInvitationEntity {
     private constructor(
         readonly id: string,
         readonly accountId: string,
-        readonly token: Token,             // ← VO (Exemplar 2)
+        readonly token: string,            // generated via the Token VO, stored as a string
         readonly isValid: boolean,
         readonly createdAt: Date,
         readonly createdBy: string | undefined,
@@ -87,21 +87,20 @@ export class AccountInvitationEntity {
     /** Write path — enforces the creation invariant in the DOMAIN, not the repo. */
     static create(props: { accountId: string; createdBy: string }): AccountInvitationEntity {
         return new AccountInvitationEntity(
-            randomUUID(), props.accountId, Token.create(), /* isValid */ true, new Date(),
+            randomUUID(), props.accountId, Token.create().toString(), /* isValid */ true, new Date(),
             props.createdBy, /* … */,
         );
     }
 
-    /** Rehydration from persistence — NO re-validation of already-trusted data. Wraps the string token
-     *  via Token.reconstitute (also no-revalidation). Called by the DAO getter. */
+    /** Rehydration from persistence — NO re-validation of already-trusted data. Called by the DAO getter. */
     static reconstitute(row: AccountInvitationData): AccountInvitationEntity {
         return new AccountInvitationEntity(
-            row.id, row.accountId, Token.reconstitute(row.token), row.isValid, row.createdAt, row.createdBy, /* … */,
+            row.id, row.accountId, row.token, row.isValid, row.createdAt, row.createdBy, /* … */,
         );
     }
 
-    /** Immutable state transition — returns a NEW instance via the private ctor (keeps the existing Token VO;
-     *  does NOT spread `...this` — that would drag the Token + relations into a raw-row shape). */
+    /** Immutable state transition — returns a NEW instance via the private ctor (keeps the token;
+     *  does NOT spread `...this` — that would drag the `account` relation into a raw-row shape). */
     revoke(user: User): AccountInvitationEntity {
         if (!this.isValid || this.accountId !== user.accountId) {
             throw new InternalServerError(CommonError.FORBIDDEN);
@@ -113,13 +112,23 @@ export class AccountInvitationEntity {
 }
 ```
 
+**⚠️ Token stored as a `string`, not a `Token` field (decided during implementation):** the credential is
+generated in the domain via `Token.create()` — which is what removes `randomUUID` from infra (the actual
+leak) — but the persisted field stays a normalized `string`. Typing it `Token` ripples destructively:
+`AccountEntity` embeds `invitations: AccountInvitationEntity[]`, and the account repo maps domain→DAO
+**structurally** (`preserveNew`/`preserve`/`softDelete`, plus `softRemove(account as AccountEntity)`), all
+relying on `token: string`. A `Token` field breaks the account aggregate's persistence and forces either
+unverifiable account-repo surgery or `as unknown as` casts (bad in a copy-out reference). Same call as the
+`Email` boundary VO — apply the VO at the seam, persist a primitive. `verify.handler` + `send-invitation`
+read `token` as a `string`, so they stay unchanged.
+
 **Touch-points:**
 | File | Change |
 |---|---|
 | `account/domain/account-invitation.entity.ts` | private ctor + `create()`/`reconstitute(AccountInvitationData)` + `readonly` + immutable `revoke()` (via private ctor, no `...this` spread) |
 | `account/domain/account-invitation.repository.ts` | **interface lives here** — retype `preserve` param `Partial<AccountEntity>` → `Partial<AccountInvitationEntity>` (mistype #1 of 2); signatures against the readonly entity |
 | `account/infrastructure/account-invitation.dao.ts` | `toEntity` → `reconstitute(...)` (passes the raw **string** token, plain dates); **drop** `@Column({ default: randomUUID() })` (`:31`); add `@Column({ unique: true })` on `token` |
-| `account/infrastructure/account-invitation.typeorm.repository.ts` | `provide()` builds via `AccountInvitationEntity.create(...)`, then **maps domain→DAO** (`this.create({ …, token: entity.token.toString() })`) — no `toDao` mapper exists in this repo; introduce a `static toDao(entity)` on the DAO to mirror `get toEntity()`, or field-map inline. **`preserve` must field-map to scalar columns only** — `this.update({ id }, { isValid, updatedBy })` — NOT hand the whole entity (Token VO + nested `account` relation) to `.update()`. Retype the param (mistype #2 of 2) `:53` |
+| `account/infrastructure/account-invitation.typeorm.repository.ts` | `provide()` builds via `AccountInvitationEntity.create(...)`, then **maps domain→DAO** (`this.create({ …, token: entity.token })`) — no `toDao` mapper exists in this repo; field-map inline, the mirror of `get toEntity()`. **`preserve` must field-map to scalar columns only** — `this.update({ id }, { isValid, updatedBy })` — NOT hand the whole entity (nested `account` relation) to `.update()`. Retype the param (mistype #2 of 2) `:53` |
 | `account/application/person-account.verify.handler.ts` | `revoke()` returns a new instance → pass it to `preserve()` (already captures the return today, so transparent) |
 | `src/__tests__/factories/account-invitation.factory.ts` | builds via `AccountInvitationDao.create(...)` (DAO, not the domain entity) → private-ctor change is safe, **but** under `UNIQUE(token)` any fixture creating >1 invitation must seed **distinct** tokens |
 | `src/database/migrations/<ts>-account-invitation-token-unique.ts` | the token migration — see **Migration safety** below (it is _not_ a clean one-line `ADD UNIQUE`) |
@@ -156,10 +165,12 @@ lifecycles**: a **self-validating boundary value** (`Email`) and an **opaque gen
   `[entityId, entityType, type, tag, detail]` unique index) that is only _sometimes_ an email, so typing the
   field `Email` would be incorrect and would ripple a VO through every cross-module reader. So `Email` needs
   only `create()` (+ `equals`/`toString`); there is no persisted-`Email` field to rehydrate.
-- `Token` is a **persisted VO**: it lives on the aggregate as `token: Token`, so it needs a validating
-  `create()` (write path) **and** a no-revalidation `reconstitute()` for the DAO `toEntity` read path — a
-  validating rehydrate would re-run validation on every trusted DB read, contradicting Exemplar 1's
-  "reconstitute doesn't re-validate" rule.
+- `Token` is a **generation VO**: the aggregate generates its credential via `Token.create()` (moving
+  generation out of infrastructure — the actual leak) but stores it as a normalized `string`, not a `Token`
+  field (see Exemplar 1: a `Token` field ripples destructively through the account aggregate's structural
+  persistence). `Token` also carries a no-revalidation `reconstitute()`, shown for completeness — the
+  trusted-rehydrate pattern for a codebase that DOES type a persisted field as a VO. The reconstitute-doesn't-
+  revalidate lesson is owned here by the **aggregate** (`AccountInvitationEntity.reconstitute`), not the VO.
 
 **`Email`** — immutable, validates + normalizes on `create`, equality-by-value:
 
