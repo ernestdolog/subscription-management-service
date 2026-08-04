@@ -374,11 +374,18 @@ Each exemplar is a small PR-sized commit set, `oxlint` + `tsgo` clean, with the 
 
 ## Definition of done
 
-- [ ] `AccountInvitationEntity` constructible only via factory; invariant enforced; immutable `revoke()` (via private ctor, persists scalar columns only); frozen-default dropped; **partial** `UNIQUE(token)` via the safe migration sequence; `preserve` retyped in **both** interface + impl. Labeled as the one rich aggregate (immutable-transition = target, mutate-`this` = legacy).
-- [ ] `Email` + `Token` VOs — self-validating `create` + no-revalidation `reconstitute`, immutable, equality-by-value; used at their domain boundaries with `.toString()` at every wire/ORM crossing; **normalization applied on both write and lookup**; `randomUUID` gone from infra (via `node:crypto` import).
-- [ ] Zero **event** publishing inside an open DB tx — the two publish sites `enqueue` `evt.get()` to a tx-bound outbox; a relay drains it via `producer.send` with `FOR UPDATE SKIP LOCKED` + a `failed` terminal state. Cognito/SES flagged as **live** hazards.
-- [ ] `dependency-cruiser` in CI (at `warn`) with the four rules (**Rule 3 allows app→foreign-domain, forbids app→foreign-infrastructure**); a meta-test proves it catches a forbidden import.
-- [ ] Each exemplar documented in the README as a copy-ready reference (incl. the two new coinages: `.value.ts`, `enqueue`).
+- [x] `AccountInvitationEntity` constructible only via factory; invariant enforced; immutable `revoke()` (via private ctor, persists scalar columns only); frozen-default dropped; **partial** `UNIQUE(token)` via the safe migration sequence; `preserve` retyped in **both** interface + impl. Labeled as the one rich aggregate (immutable-transition = target, mutate-`this` = legacy). _(token stored as a normalized `string`, generated via `Token.create()` — see the aggregate note; a `Token` field rippled destructively through the account aggregate's structural persistence.)_
+- [x] `Email` + `Token` VOs — immutable, self-validating/generating, equality-by-value; `randomUUID` gone from infra (via `node:crypto`). Both applied as **boundary/generation VOs**, persisting primitives: `Email` normalizes + validates at the create/lookup edge with **normalization on both write and lookup** (SoT); `Token` generates in the domain. `reconstitute` (no-revalidation) is owned by the **aggregate**.
+- [x] Zero **event** publishing inside an open DB tx — the two publish sites `enqueue` `evt.get()` to a tx-bound outbox; a relay drains via `producer.send` with `FOR UPDATE SKIP LOCKED` + a `failed` terminal state. Cognito/SES flagged as **live** hazards.
+- [x] `dependency-cruiser` in CI (at `warn`) with the four rules (**Rule 3 allows app→foreign-domain, forbids app→foreign-infrastructure**); a meta-test proves it catches a forbidden import.
+- [ ] Each exemplar documented in the README as a copy-ready reference (incl. the coinages `.value.ts`, `enqueue`). _(follow-up)_
+
+**Delivered 2026-08-04** (branch `feat/ddd-exemplars`): boundaries `048d9bd` → VOs `67eec16` → aggregate `a9ba9ac`
+→ outbox `e5b4387`. Local gates green: `tsgo` 0 errors, `oxlint` 0 errors (16 pre-existing warnings, none added),
+`prettier` clean, `depcruise` 0 errors (79 warnings = the documented backlog), 25/25 unit tests. **Not runnable
+locally** (no Postgres/Kafka): the migrations + integration/e2e suite (incl. the outbox enqueue-in-tx / relay-drain
+DB flow) validate in CI — the outbox has a unit test for the `toOutboxRecord` narrowing only; the DB-level outbox
+flow tests remain a follow-up.
 
 ## References
 
