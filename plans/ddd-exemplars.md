@@ -3,7 +3,7 @@
 **Date:** 2026-08-04
 **Base:** `origin/development` @ `ead011f` (verified against live code — no stale coordinates)
 **Type:** feature (reference patterns) + one bug fold-in
-**Status:** proposed
+**Status:** reviewed — 5-agent pass folded in (see _Review corrections_ at end)
 
 ## Goal
 
@@ -23,10 +23,18 @@ missing pattern**, so a reader has a correct example to lift:
 Each is small, self-contained, and grounded in the canon (Evans building blocks; Vernon aggregate rules;
 Wlaschin functional-DDD; Richardson transactional outbox).
 
+**New conventions this plan coins** (called out because a cheatsheet's coinages get copied verbatim, so they
+must be _deliberate_): the `.value.ts` file suffix for Value Objects (sits beside `.entity.ts` — the repo
+has no prior VO suffix), and the `enqueue` outbox repo verb (steps outside the repo's `provide` /
+`preserveNew` / `preserve` write vocabulary, but is domain-accurate for an outbox). Both are intentional.
+
 ## Non-goals
 
-- Making _all 9_ entities rich (only one exemplar).
-- Moving SES/Cognito out of the tx or compensating them (that needs a post-commit seam + saga — separate; noted under Outbox).
+- Making _all 9_ entities rich (only one exemplar). Immutable transitions are the **directional target**; the
+  mutate-`this` style in the other 8 entities (incl. `SubscriptionEntity.addAccount`) is the **legacy baseline** — the
+  label on Exemplar 1 must say so, or a reader sees two contradictory transition idioms with no signpost.
+- Moving SES/Cognito out of the tx or compensating them — separate work (a post-commit seam + saga). **⚠️ These
+  remain _live_ data-integrity hazards after this plan lands** (see Outbox note), not merely "future polish."
 - Breaking the two cross-module ORM cycles (baked into `@OneToMany`/`@ManyToOne` across module DAOs — the boundary config _documents_ them, doesn't rip them out).
 - Switching stacks (stay on Fastify + TypeBox + TypeORM + KafkaJS + Cognito, `oxlint` + `tsgo`).
 
@@ -44,6 +52,7 @@ factory fixes. It demonstrates the full pattern: private ctor, validating `creat
 
 - `src/modules/account/domain/account-invitation.entity.ts` — public-mutable ctor fields; `revoke(user)` mutates `this.isValid = false` and returns `this`.
 - `src/modules/account/infrastructure/account-invitation.typeorm.repository.ts:27-39` — `provide()` generates `token = randomUUID()` + `isValid = true` **in infra** (the invariant leak); `preserve(id, input: Partial<AccountEntity>)` **:53** uses the **wrong entity type** (`AccountEntity`, should be `AccountInvitationEntity`).
+- `src/modules/account/domain/account-invitation.repository.ts` — the **interface + `getAccountInvitationRepository(manager)` selector live here (in `domain/`)**; `preserve`'s param carries the **same `Partial<AccountEntity>` mistype**. Both interface + impl must be retyped in lockstep or the build breaks (the sole caller passes an `AccountInvitationEntity`; it only compiles today by loose structural overlap).
 - `src/modules/account/infrastructure/account-invitation.dao.ts:31` — `@Column({ default: randomUUID() })` is **evaluated once at class-load** → every tokenless row shares one UUID (real bug); `toEntity` getter does `new AccountInvitationEntity(...)`.
 - No `UNIQUE(token)` constraint (verify auth is token-only).
 
@@ -51,6 +60,19 @@ factory fixes. It demonstrates the full pattern: private ctor, validating `creat
 
 ```ts
 // account-invitation.entity.ts  (sketch)
+import { randomUUID } from 'node:crypto'; // repo convention — NOT global crypto.randomUUID()
+
+/** Raw persistence shape — token is a STRING here (the DB column), lifted to a Token VO on reconstitute. */
+type AccountInvitationData = {
+    id: string;
+    accountId: string;
+    token: string;
+    isValid: boolean;
+    createdAt: Date;
+    createdBy: string | undefined;
+    // …audit fields, plain scalars/dates only — no VOs, no relations
+};
+
 export class AccountInvitationEntity {
     private constructor(
         readonly id: string,
@@ -65,20 +87,28 @@ export class AccountInvitationEntity {
     /** Write path — enforces the creation invariant in the DOMAIN, not the repo. */
     static create(props: { accountId: string; createdBy: string }): AccountInvitationEntity {
         return new AccountInvitationEntity(
-            crypto.randomUUID(), props.accountId, Token.create(), /* isValid */ true, new Date(),
+            randomUUID(), props.accountId, Token.create(), /* isValid */ true, new Date(),
             props.createdBy, /* … */,
         );
     }
 
-    /** Rehydration from persistence — no re-validation of already-trusted data. */
-    static reconstitute(row: AccountInvitationData): AccountInvitationEntity { /* … */ }
+    /** Rehydration from persistence — NO re-validation of already-trusted data. Wraps the string token
+     *  via Token.reconstitute (also no-revalidation). Called by the DAO getter. */
+    static reconstitute(row: AccountInvitationData): AccountInvitationEntity {
+        return new AccountInvitationEntity(
+            row.id, row.accountId, Token.reconstitute(row.token), row.isValid, row.createdAt, row.createdBy, /* … */,
+        );
+    }
 
-    /** Immutable state transition — returns a NEW instance, does not mutate this. */
+    /** Immutable state transition — returns a NEW instance via the private ctor (keeps the existing Token VO;
+     *  does NOT spread `...this` — that would drag the Token + relations into a raw-row shape). */
     revoke(user: User): AccountInvitationEntity {
         if (!this.isValid || this.accountId !== user.accountId) {
             throw new InternalServerError(CommonError.FORBIDDEN);
         }
-        return AccountInvitationEntity.reconstitute({ ...this, isValid: false, updatedBy: user.accountId });
+        return new AccountInvitationEntity(
+            this.id, this.accountId, this.token, /* isValid */ false, this.createdAt, this.createdBy, /* updatedBy */ user.accountId,
+        );
     }
 }
 ```
@@ -86,16 +116,30 @@ export class AccountInvitationEntity {
 **Touch-points:**
 | File | Change |
 |---|---|
-| `account/domain/account-invitation.entity.ts` | private ctor + `create()`/`reconstitute()` + `readonly` + immutable `revoke()` |
-| `account/infrastructure/account-invitation.dao.ts` | `toEntity` → `reconstitute(...)`; **drop** `@Column({ default: randomUUID() })` (`:31`); add `@Column({ unique: true })` on `token` |
-| `account/infrastructure/account-invitation.typeorm.repository.ts` | `provide()` builds via `AccountInvitationEntity.create(...)` → map to DAO for `save` (can't `save` a domain entity — a domain→DAO mapping step is required); **fix** `preserve` param type `Partial<AccountEntity>` → `Partial<AccountInvitationEntity>` (`:53`) |
-| `account/infrastructure/account-invitation.repository.ts` | interface signatures against the readonly entity |
-| `account/application/person-account.verify.handler.ts` | `revoke()` now returns a new instance → pass it to `preserve()` |
-| `src/database/migrations/<ts>-account-invitation-token-unique.ts` | add `UNIQUE(token)` (raw-SQL style, matching the sole existing migration) |
+| `account/domain/account-invitation.entity.ts` | private ctor + `create()`/`reconstitute(AccountInvitationData)` + `readonly` + immutable `revoke()` (via private ctor, no `...this` spread) |
+| `account/domain/account-invitation.repository.ts` | **interface lives here** — retype `preserve` param `Partial<AccountEntity>` → `Partial<AccountInvitationEntity>` (mistype #1 of 2); signatures against the readonly entity |
+| `account/infrastructure/account-invitation.dao.ts` | `toEntity` → `reconstitute(...)` (passes the raw **string** token, plain dates); **drop** `@Column({ default: randomUUID() })` (`:31`); add `@Column({ unique: true })` on `token` |
+| `account/infrastructure/account-invitation.typeorm.repository.ts` | `provide()` builds via `AccountInvitationEntity.create(...)`, then **maps domain→DAO** (`this.create({ …, token: entity.token.toString() })`) — no `toDao` mapper exists in this repo; introduce a `static toDao(entity)` on the DAO to mirror `get toEntity()`, or field-map inline. **`preserve` must field-map to scalar columns only** — `this.update({ id }, { isValid, updatedBy })` — NOT hand the whole entity (Token VO + nested `account` relation) to `.update()`. Retype the param (mistype #2 of 2) `:53` |
+| `account/application/person-account.verify.handler.ts` | `revoke()` returns a new instance → pass it to `preserve()` (already captures the return today, so transparent) |
+| `src/__tests__/factories/account-invitation.factory.ts` | builds via `AccountInvitationDao.create(...)` (DAO, not the domain entity) → private-ctor change is safe, **but** under `UNIQUE(token)` any fixture creating >1 invitation must seed **distinct** tokens |
+| `src/database/migrations/<ts>-account-invitation-token-unique.ts` | the token migration — see **Migration safety** below (it is _not_ a clean one-line `ADD UNIQUE`) |
 
-**⚠️ Label it:** doc-comment this as _the one_ rich-aggregate reference; the other 8 entities stay anemic on purpose (so a copyist doesn't half-migrate).
+**⚠️ Migration safety (the `UNIQUE(token)` will FAIL on deploy if added naively):** the frozen default
+`'3c8a0348-5d51-44eb-af03-8d77f28bc253'` is **baked into the DB** (`1744917689309-initial-migration.ts:112`), so
+every tokenless row carries the identical string → `ADD CONSTRAINT … UNIQUE(token)` throws `duplicate key`. Required
+sequence, all in one migration `up()`, deployed **atomically with the `Token.create()` code cutover**:
 
-**Tests:** construction only via factory; `create()` yields `isValid:true` + a valid token; `revoke()` returns a new instance, original unchanged; `revoke()` throws for non-owner / already-revoked; `reconstitute` from a row incl. soft-deleted.
+1. **Prod pre-check (before the migration runs):** `SELECT token, count(*) FROM account_invitation GROUP BY token HAVING count(*) > 1` on a prod-RO copy.
+2. **Backfill / de-dupe:** `UPDATE account_invitation SET token = uuid_generate_v4()::varchar WHERE token = '3c8a0348-…'` (and any other dup groups). `uuid_generate_v4()` is available (initial migration uses it).
+3. **Add a _partial_ unique index** `… UNIQUE(token) WHERE deleted_at IS NULL` (soft-delete-aware — `deletedAt` exists; a plain unique would count soft-deleted rows and block token re-issue).
+4. **Drop the column DEFAULT** (`ALTER TABLE … ALTER COLUMN token DROP DEFAULT`) in the **same** migration — keep `NOT NULL`; the app now always supplies the token via `Token.create()`. The default-drop and the always-supply-token code are **one deploy** (drop-before-cutover on old code → `NOT NULL` violation on the tokenless path).
+5. `down()`: drop the index (order matters), restore nothing (do not re-introduce the frozen default).
+
+**⚠️ Label it:** doc-comment this as _the one_ rich-aggregate reference, and state that **immutable transitions are the
+target** while the mutate-`this` style elsewhere (incl. `SubscriptionEntity.addAccount`) is legacy baseline — so a copyist
+reading two entities side-by-side sees the intent, not a contradiction.
+
+**Tests:** construction only via factory; `create()` yields `isValid:true` + a valid token; `revoke()` returns a new instance, original unchanged; `revoke()` throws for non-owner / already-revoked; `reconstitute` from a row incl. soft-deleted; `revoke()→preserve()` persists **scalar columns only** (no Token/relation object reaches `.update()`).
 
 ---
 
@@ -105,21 +149,28 @@ export class AccountInvitationEntity {
 `AccountInvitationEntity.token`. Two small VOs demonstrate the two classic flavours: a **self-validating**
 value (`Email`) and an **opaque generated credential** (`Token`, owned by the aggregate in Exemplar 1).
 
-**`Email`** — immutable, validates on construction, equality-by-value:
+Both VOs carry **two** construction paths, mirroring the aggregate: a validating `create()` at the domain
+boundary, and a **no-revalidation `reconstitute()`** for trusted persisted data (used by the DAO `toEntity`
+getter — the only read path). A validating rehydrate would re-run the regex on every DB read and would
+contradict Exemplar 1's "reconstitute doesn't re-validate" rule.
+
+**`Email`** — immutable, validates + normalizes on `create`, equality-by-value:
 
 ```ts
-// src/modules/contact-detail/domain/email.value.ts  (sketch)
+// src/modules/contact-detail/domain/email.value.ts  (sketch — NOTE: `.value.ts` is a NEW suffix, see Goal)
 export class Email {
     private constructor(readonly value: string) {}
+    /** Boundary parse — validates the domain rule + normalizes. */
     static create(raw: string): Email {
         const normalized = raw.trim().toLowerCase();
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
-            throw new InternalServerError(CommonError.VALIDATION, {
-                resource: 'Email',
-                value: raw,
-            });
+            throw new InternalServerError(CommonError.VALIDATION, { resource: 'Email', value: raw });
         }
         return new Email(normalized);
+    }
+    /** Trusted rehydrate — no re-validation (persisted rows are already normalized; see the SoT note). */
+    static reconstitute(trusted: string): Email {
+        return new Email(trusted);
     }
     equals(other: Email): boolean {
         return this.value === other.value;
@@ -130,22 +181,36 @@ export class Email {
 }
 ```
 
-- **Boundary:** parse at the create-command edge (the TypeBox request already validates _shape_; the VO
-  validates the _domain rule_ + normalizes). Used by `ContactDetailEntity` (`detail: Email` when type=EMAIL)
-  and the `isEmailAlreadyTaken` check.
-- **Keep it demonstrative, not invasive:** scope to the contact-detail create/lookup path; do not thread it through every DTO (the TypeBox wire types stay `string`; convert at the domain boundary).
+- **Boundary:** parse at the create-command edge (`command.email → Email.create(...)` in `subscription.create.handler.ts:89`).
+- **⚠️ SoT — normalization must be applied on BOTH write and lookup, or it silently weakens an existing invariant.**
+  `Email.create` lowercases/trims, but today `isEmailAlreadyTaken` does a **raw `detail` equality query**
+  (`contact-detail.typeorm.repository.ts:24-27`), the DB unique index is on **raw `detail`**
+  (`initial-migration.ts:40-46`), and `preserveNew` spreads `input.detail` **unchanged** into `this.create({…})`
+  (`:58-62`). If create normalizes but lookup/store don't, the "already taken" check misses case-variant duplicates
+  and the unique index won't catch them either. Both the stored `ContactDetailDao.detail` and the
+  `isEmailAlreadyTaken` argument must be the **normalized** value. (The `isEmailAlreadyTaken` pre-check stays a
+  non-atomic TOCTOU advisory — the real guarantee is the unique index; note that, don't try to fix it here.)
+- **Keep it demonstrative, not invasive:** the TypeBox **wire** types stay `string` — convert at the domain
+  boundary. Enumerate the `.toString()` crossings so nothing serializes a class instance: `preserveNew` spread
+  (`contact-detail.typeorm.repository.ts:58`), the `.exists({ where: { detail } })` lookup (`:25-27`), the TypeBox
+  response serializer `contact-detail.response.ts:31-42` (field is `Type.String()` — must receive `detail.toString()`,
+  not the `Email`), and the cross-module reads at `subscription.create.handler.ts:189-190` (SES `to:`/link) and
+  `verify.handler.ts:82`. (`detail` is a public field read across modules, so the change is wider than "create/lookup".)
 
-**`Token`** — generated + validated in the domain, consumed by `AccountInvitationEntity.create()`:
+**`Token`** — generated in the domain, consumed by `AccountInvitationEntity.create()`:
 
 ```ts
 // src/modules/account/domain/token.value.ts  (sketch)
+import { randomUUID } from 'node:crypto'; // repo convention
+
 export class Token {
     private constructor(readonly value: string) {}
     static create(): Token {
-        return new Token(crypto.randomUUID());
+        return new Token(randomUUID());
     }
-    static fromString(raw: string): Token {
-        /* validate uuid */ return new Token(raw);
+    /** Trusted rehydrate — NO validation (the only inbound raw token is the DB row / lookup key; both trusted). */
+    static reconstitute(raw: string): Token {
+        return new Token(raw);
     }
     equals(other: Token): boolean {
         return this.value === other.value;
@@ -156,35 +221,47 @@ export class Token {
 }
 ```
 
-This is what removes the `randomUUID()` from infra (`account-invitation.typeorm.repository.ts:28` + the DAO default) — generation moves into `Token.create()`, called by the aggregate factory.
+This is what removes the `randomUUID()` from infra (`account-invitation.typeorm.repository.ts:28` + the DAO
+default) — generation moves into `Token.create()`, called by the aggregate factory. (No public `fromString`
+uuid-validator: it would have exactly one caller — the DAO getter — and validating trusted data contradicts
+the reconstitute rule.)
 
 **Touch-points:** new `email.value.ts` + `token.value.ts`; `AccountInvitationEntity` uses `Token`;
-`ContactDetailEntity.detail` typed `Email` (map `string`↔`Email` in the DAO `toEntity`/`toDao`);
-`contact-detail` repo `isEmailAlreadyTaken(Email)`; the create handler converts `command.email → Email.create(...)`.
+`ContactDetailEntity.detail` typed `Email` (map `string`↔`Email` — wrap via `Email.reconstitute` in the DAO
+`toEntity`, unwrap via `.toString()` in the new `toDao`/inline-`create` and in `preserve`; there is **no existing
+`toDao`**, so introduce it as the mirror of `get toEntity()`); `contact-detail` repo `isEmailAlreadyTaken(Email)`
+(normalizes before the query); the create handler converts `command.email → Email.create(...)`.
 
-**Tests:** `Email.create` rejects malformed, normalizes case/trim, `equals` by value; `Token.create` yields a valid uuid; round-trip `fromString`.
+**Tests:** `Email.create` rejects malformed, normalizes case/trim, `equals` by value; `Email.reconstitute` does **not**
+re-validate; a case-variant email is caught by the "already taken" check (SoT round-trip); `Token.create` yields a
+valid uuid; `Token.reconstitute` wraps without validating.
 
 ---
 
-## Exemplar 3 — Transactional outbox (kills the dual-write)
+## Exemplar 3 — Transactional outbox (kills the _event_ dual-write)
 
 **The problem (verified):** `subscription.create.handler.ts:82` and `subscription.update.handler.ts:42`
-call `await eventProducer.publish(...)` **inside the open DB transaction**, and
-`AbstractTransactionManager` (`src/shared/transaction/tool/abstract.transaction-manager.ts`) exposes
+call `await eventProducer.publish(SubscriptionEntityEventMapper.to{Created,Updated}Event(subscription))`
+**inside the open DB transaction** — they pass the **event object** (`publish` calls `event.get()` internally),
+and `AbstractTransactionManager` (`src/shared/transaction/tool/abstract.transaction-manager.ts`) exposes
 **no after-commit seam**. So a rollback-after-publish emits a phantom event; a publish-failure rolls back a
 good write. The outbox is the correct fix precisely because there's no commit hook to hang a post-commit
 publish on.
 
-**Design (Richardson):** write the event as a **row in the same transaction** as the business write (via a
-tx-bound repo that joins `manager.context`), then a **relay** drains pending rows and publishes them.
+**Design (Richardson):** at the publish sites, call `evt.get()` yourself (the producer used to) to get the
+**validated `ProducerRecord`**, and `enqueue` it as a **row in the same transaction** as the business write (via a
+tx-bound repo that joins `manager.context`). A **relay** then drains pending rows and publishes them via the
+**low-level `producer.send(record)`** — _not_ `eventProducer.publish`, which expects an event, not a `ProducerRecord`.
+
+Validating at enqueue-time (`get()` throws `EVENT_VALIDATION` if invalid) is a **feature**: an invalid event now
+rolls the business write back instead of publishing garbage.
 
 ```mermaid
 erDiagram
   outbox_message {
     uuid id PK
-    varchar topic
-    jsonb payload
-    jsonb headers
+    varchar topic "denormalized from the record, for indexing/observability"
+    jsonb payload "the ProducerRecord, narrowed to a JSON-safe projection (see below)"
     varchar status "pending|published|failed"
     int attempts
     timestamptz available_at
@@ -193,23 +270,43 @@ erDiagram
   }
 ```
 
+**⚠️ Type-honest payload:** `ProducerRecord.messages[].value` is `Buffer | string | null`, so a column typed as a raw
+`ProducerRecord` is a lying type (a `Buffer` won't round-trip through `jsonb`). At runtime `AbstractKafkaEvent.compose`
+already sets `value`/headers to strings, so narrow the column to a JSON-safe projection —
+`type OutboxRecord = { topic: string; messages: { value: string; headers?: Record<string,string> }[] }` — and have
+`enqueue` assert `evt.get()` into it. Store the whole (narrowed) record in `payload`; `topic` is denormalized out for the index.
+
 **Touch-points:**
 | Artifact | Detail |
 |---|---|
-| Migration `src/database/migrations/<ts>-outbox.ts` | create `outbox_message` (raw SQL, matching `1744917689309-initial-migration.ts`); index `(status, available_at)` |
-| New module `src/modules/outbox/` | `domain/outbox-message.entity.ts` + `infrastructure/outbox-message.dao.ts` + `outbox-message.repository.ts` (interface + `getOutboxRepository(manager)`) + `outbox-message.typeorm.repository.ts` — **must resolve `manager.context`** so the INSERT joins the business tx (mirror `account-invitation.typeorm.repository.ts:58-63`) |
-| `subscription.create.handler.ts:82`, `subscription.update.handler.ts:42` | replace `eventProducer.publish(evt.get())` with `outboxRepository.enqueue(evt.get())` on the **tx-bound** repo (store the composed, validated `ProducerRecord` — `AbstractKafkaEvent.get()` validates on call) |
-| Relay `src/event-listener/outbox-relay.daemon.ts` | poll `status='pending' AND available_at <= now()` → `eventProducer.publish`/`producer.send` → mark `published`; backoff via `available_at` + `attempts`; `start()` must **resolve** (self-rescheduling timer, like the existing daemons — don't block `Application`'s `Promise.all`) |
-| Runnable wiring | register the relay daemon in the event-listener runnable's `daemons: [...]` (co-locate — don't mint a third process) |
+| Migration `src/database/migrations/<ts>-outbox.ts` | create `outbox_message` (raw SQL, matching `1744917689309-initial-migration.ts`; symmetric `down()` drops index then table); index `(status, available_at)` |
+| New module `src/modules/outbox/` | **`domain/outbox-message.entity.ts` + `domain/outbox-message.repository.ts`** (interface + `getOutboxRepository(manager)` — the interface lives in `domain/`, like every other module) **+ `infrastructure/outbox-message.dao.ts` + `infrastructure/outbox-message.typeorm.repository.ts`** (impl + `getTypeOrmOutboxRepository(manager)` — **must resolve `manager.context`** so the INSERT joins the business tx; mirror `account-invitation.typeorm.repository.ts:58-63`). ⚠️ The DAO **must** live under `src/modules/**/infrastructure/*.dao.ts` — that glob (`typeorm.config.ts:17`) is what auto-registers entities; under `src/shared/` it would silently fail to register. (This makes a 6th, _technical_ module — update the README's "5 modules".) |
+| `subscription.create.handler.ts:82`, `subscription.update.handler.ts:42` | replace `eventProducer.publish(SubscriptionEntityEventMapper.to…Event(subscription))` with `outboxRepository.enqueue(SubscriptionEntityEventMapper.to…Event(subscription).get())` on the **tx-bound** repo. **⚠️ Footgun:** resolve the outbox repo from the **same `manager` instance** whose `run()` opened the tx — never a module singleton. `manager.context` is a mutable, overwritten-never-cleared field; today it's safe only because each controller does `new TypeOrmTransactionManager()` per request. A copyist wiring the outbox off a shared manager gets cross-tx bleed. Add a test that a second concurrent `run()` on a _shared_ manager is isolated/rejected. |
+| Relay `src/event-listener/outbox-relay.daemon.ts` | poll `SELECT … WHERE status='pending' AND available_at <= now() FOR UPDATE SKIP LOCKED` → `producer.send(record)` → mark `published`. **`FOR UPDATE SKIP LOCKED` is required** (>1 consumer instance would otherwise double-publish; KafkaJS `send` is not idempotent here). On failure: `attempts++`, back off via `available_at`; after **N attempts → `status='failed'`** (dead-letter; mirror the consumer daemon's `MAX_RETRIES = 3`) — without a terminal state a poison row retries forever and head-of-line-blocks the scan. Open a fresh per-poll tx via the existing **`AbstractEventListener.runInTransaction` seam** (`abstract.event-listener.ts:39-48`), don't hand-roll one. `start()` must **resolve** (self-rescheduling `setTimeout`, like the existing daemons — a `while(true)` would block `Application`'s `Promise.all` and the health/consumer daemons would never boot); pair with `stop()` clearing the timer. |
+| Runnable wiring | register the relay in the event-listener runnable's `daemons: [...]` (co-locate — don't mint a third process). **⚠️** `event-listener.runnable.ts` does **not** call `initializeKafkaProducerClient()` (the api runnable does, `:21`) — add it, or the relay relies on undocumented lazy-connect inside the poll loop. |
 
-**Note (out of scope, flag as follow-up):** SES email and Cognito calls also fire in-tx. Cognito is
-non-transactional and returns data synchronously → it can't be outboxed; it needs a **post-commit seam on
-`AbstractTransactionManager` + compensation** (the verify flow would otherwise leave an orphaned Cognito
-user). This exemplar fixes the **event** dual-write only; the SES/Cognito seam is a named next step.
+**At-least-once is safe here — cite why:** the relay delivers at-least-once (a slow publish + next tick, or a
+crash between `send` and `mark published`, re-sends). That's absorbed because the **consumer is idempotent** —
+`SubscriptionCreatedListener` does a `getOneWithRelations` exists-check and no-ops on a duplicate create
+(`subscription-created.listener.ts:36-52`); the update path is a full-state `preserve` (last-write-wins). State this
+explicitly — it's the actual justification for _not_ building relay-side dedup.
+
+**⚠️ Note — live hazards this does NOT fix (do not let a reader infer end-to-end write safety):** this exemplar
+kills the **Kafka event** dual-write only. Two worse dual-writes stay **live**:
+- **Cognito** (`user.create.handler.ts:42,50`, driven from `person-account.verify.handler.ts`) — two synchronous,
+  non-transactional identity calls **inside** the DB tx; a rollback leaves an **orphaned Cognito user** (and the
+  password-set is a second call that can independently fail → passwordless user). Cognito can't be outboxed (the
+  flow consumes the created `User` synchronously, `verify.handler.ts:47`); it needs a post-commit seam +
+  compensation, or create-first-idempotently-keyed-by-accountId.
+- **SES** (`subscription.create.handler.ts:80`) — a real email sent in-tx; a rollback emits a phantom "verify your
+  account" email for a token that no longer exists.
+
+Both are **known live data-integrity hazards**, not just "next steps."
 
 **Tests:** DB-commit failure after enqueue → no `outbox_message` row + nothing published; enqueue joins the
-tx (assert the row is in the same `txid_current`); relay publishes a pending row then marks it published;
-crash between commit and relay → event still published on next poll.
+tx (assert the row is in the same `txid_current`); enqueue calls `get()` (validation-in-tx locked in); an invalid
+event rolls the write back; relay publishes a pending row then marks it published; a permanently-failing row lands
+in `failed` after N attempts; crash between commit and relay → event still published on next poll.
 
 ---
 
@@ -223,18 +320,22 @@ two module cycles are unpoliced; a 6th cross-module call would pass CI silently.
 
 - Add `dependency-cruiser` (devDep) + `.dependency-cruiser.cjs` at repo root. Resolve the `#app/*` alias to
   **`src`** (tsconfig `paths`) via `--ts-config ./tsconfig.json` + `enhancedResolveOptions` — the
-  package.json `imports` map points at `./build/`, so force the source root or it mis-resolves.
-- `depcruise` script + a step in CI (`lint-and-test.yml` runs oxlint/tsgo/prettier as separate steps — add an explicit `depcruise` step; folding into `npm run lint` wouldn't run in CI).
+  package.json `imports` map points at `./build/`, so force the source root or it mis-resolves (and silently
+  matches nothing — the whole guardrail no-ops).
+- `depcruise` script + a step in CI (`lint-and-test.yml` runs oxlint/tsgo/prettier as separate steps — add an explicit `depcruise` step; `npm run lint` is `oxlint && prettier` and is **not** invoked in CI, so folding in wouldn't run).
 - **Rules:**
     1. `no-cross-module-domain` — `modules/<A>/domain/**` must not import `modules/<B>/**`.
     2. `no-app-to-foreign-app` — `modules/<A>/application/**` must not import `modules/<B>/application/**` (the 3 `authentication` calls).
-    3. `no-app-to-foreign-domain-infra` — `modules/<A>/application/**` must not import `modules/<B>/{domain,infrastructure}/**`.
+    3. `no-app-to-foreign-infrastructure` — `modules/<A>/application/**` must not import `modules/<B>/infrastructure/**`. **⚠️ Corrected:** the rule must **allow** `application → foreign-`domain`` — importing a foreign module's `domain/index.js` (the repository _interface_ + `getXRepository` factory) **IS** the ports/adapters wiring here (6 handlers do it: `subscription.create`, `account.create`, `account.delete`, `account.update-me`, `person-account.send-invitation`, `person-account.verify`). A rule forbidding app→foreign-`domain` would bury the intended design in warnings and train readers to ignore the tool. Forbid only reaching **past the port** into a concrete foreign `.typeorm.repository`/`.dao` (i.e. `infrastructure/**`).
     4. `no-module-cycles` — `{ to: { circular: true } }`.
-- **⚠️ Sequencing:** the codebase currently **violates** all of these (the two ORM cycles + the 3 app→app
-  edges + the god orchestration handler). Ship the rules at **`warn`** (or with an explicit `allow` list of
-  the known violations) so CI stays green; the value is the **guardrail against new violations** + a visible
-  backlog. A `no-cycle` at `error` would require breaking the cross-module `@OneToMany` relations first (real
-  refactor, out of scope here).
+- **⚠️ Sequencing:** the codebase currently **violates** several of these. Ship the rules at **`warn`** so CI stays
+  green; the value is the **guardrail against new violations** + a visible backlog. **Do not** use an explicit
+  `allow`-list of known violations unless it is _complete_ — the known set is larger than it looks:
+    - Rule 1 (`no-cross-module-domain`) is **already violated in 3 places** the original inventory missed:
+      `account/domain/account.type.ts:1`, `person/domain/person.entity.ts:1`, `subscription/domain/subscription.entity.ts:1`.
+    - Rule 2: the 3 app→app edges into `authentication`.
+    - Rule 4: the two ORM cycles (`person↔contact-detail`, `account↔subscription`).
+  A `no-cycle` at `error` would require breaking the cross-module `@OneToMany` relations first (real refactor, out of scope).
 
 **Tests:** a meta-test — a fixture import that crosses a forbidden boundary makes `depcruise` exit non-zero.
 
@@ -244,9 +345,9 @@ two module cycles are unpoliced; a 6th cross-module call would pass CI silently.
 
 Largely independent; suggested order by value + isolation:
 
-1. **Exemplar 4 (boundaries)** — cheapest, highest guardrail value; land at `warn` first.
-2. **Exemplar 2 (VOs)** — small, self-contained; `Token` unblocks the aggregate factory.
-3. **Exemplar 1 (rich aggregate)** — uses `Token`; folds in the frozen-default + mistype + `UNIQUE(token)` fixes.
+1. **Exemplar 4 (boundaries)** — cheapest, highest guardrail value; land at `warn` first (**with the corrected Rule 3** — otherwise the first run buries the intended architecture in warnings).
+2. **Exemplar 2 (VOs)** — small, self-contained; `Token` unblocks the aggregate factory; introduces the `toDao` seam Exemplar 1 reuses.
+3. **Exemplar 1 (rich aggregate)** — uses `Token`; folds in the frozen-default + mistype + `UNIQUE(token)` fixes (with the **Migration safety** sequence — atomic default-drop + `Token.create()` cutover).
 4. **Exemplar 3 (outbox)** — the biggest; new module + migration + relay.
 
 Each exemplar is a small PR-sized commit set, `oxlint` + `tsgo` clean, with the tests above added to
@@ -254,18 +355,43 @@ Each exemplar is a small PR-sized commit set, `oxlint` + `tsgo` clean, with the 
 
 ## Definition of done
 
-- [ ] `AccountInvitationEntity` constructible only via factory; invariant enforced; immutable `revoke()`; frozen-default dropped; `UNIQUE(token)`; `preserve` retyped. Labeled as the one rich aggregate.
-- [ ] `Email` + `Token` VOs — self-validating, immutable, equality-by-value; used at their domain boundaries; `randomUUID` gone from infra.
-- [ ] Zero event publishing inside an open DB tx — the two publish sites enqueue to a tx-bound outbox; a relay drains it; SES/Cognito seam flagged as follow-up.
-- [ ] `dependency-cruiser` in CI (at `warn`) with the four rules; a meta-test proves it catches a forbidden import.
-- [ ] Each exemplar documented in the README as a copy-ready reference.
+- [ ] `AccountInvitationEntity` constructible only via factory; invariant enforced; immutable `revoke()` (via private ctor, persists scalar columns only); frozen-default dropped; **partial** `UNIQUE(token)` via the safe migration sequence; `preserve` retyped in **both** interface + impl. Labeled as the one rich aggregate (immutable-transition = target, mutate-`this` = legacy).
+- [ ] `Email` + `Token` VOs — self-validating `create` + no-revalidation `reconstitute`, immutable, equality-by-value; used at their domain boundaries with `.toString()` at every wire/ORM crossing; **normalization applied on both write and lookup**; `randomUUID` gone from infra (via `node:crypto` import).
+- [ ] Zero **event** publishing inside an open DB tx — the two publish sites `enqueue` `evt.get()` to a tx-bound outbox; a relay drains it via `producer.send` with `FOR UPDATE SKIP LOCKED` + a `failed` terminal state. Cognito/SES flagged as **live** hazards.
+- [ ] `dependency-cruiser` in CI (at `warn`) with the four rules (**Rule 3 allows app→foreign-domain, forbids app→foreign-infrastructure**); a meta-test proves it catches a forbidden import.
+- [ ] Each exemplar documented in the README as a copy-ready reference (incl. the two new coinages: `.value.ts`, `enqueue`).
 
 ## References
 
 - Tx-bound repo to mirror: `src/modules/account/infrastructure/account-invitation.typeorm.repository.ts:58-63`
-- Migration template: `src/database/migrations/1744917689309-initial-migration.ts`
-- Event publish sites: `subscription.create.handler.ts:82`, `subscription.update.handler.ts:42`
+- Relay per-poll tx seam to reuse: `src/shared/event-listener/abstract.event-listener.ts:39-48`
+- Migration template + baked frozen default: `src/database/migrations/1744917689309-initial-migration.ts` (`:112`)
+- Entities glob (dictates outbox DAO placement): `src/configs/typeorm.config.ts:17`
+- Event publish sites (pass the **event**, not `.get()`): `subscription.create.handler.ts:82`, `subscription.update.handler.ts:42`
+- Idempotent consumer (absorbs relay at-least-once): `src/modules/subscription/application/listeners/subscription-created.listener.ts:36-52`
+- Kafka producer init (missing in the event runnable): `src/api-server.runnable.ts:21` vs `src/event-listener.runnable.ts`
 - Transactional Outbox — Chris Richardson, https://microservices.io/patterns/data/transactional-outbox.html
 - Aggregates / factories / VOs — Evans (DDD), Vernon "Effective Aggregate Design"
 - Immutable domain / make-illegal-states-unrepresentable — Scott Wlaschin, "Domain Modeling Made Functional"
 - dependency-cruiser — https://github.com/sverweij/dependency-cruiser
+
+---
+
+## Review corrections (5-agent pass, 2026-08-04)
+
+Folded in from architecture-strategist + kieran-typescript + data-integrity-guardian + pattern-recognition +
+code-simplicity (tight leash). All are **precision corrections, not descopes** — the four exemplars are unchanged
+in scope. The simplicity reviewer produced only in-architecture step-trims (reuse the `runInTransaction` seam;
+no-revalidation VO rehydrate; `node:crypto` import) + an explicit "no redundant abstraction to cut" — leash held.
+
+| # | Where | Correction |
+|---|---|---|
+| 1 | Outbox | Publish sites pass the **event**, not `evt.get()`; relay drains via `producer.send(record)`, not `eventProducer.publish` (type-incompatible). |
+| 2 | 1 + 2 | **`toDao` does not exist** — introduce it as the mirror of `get toEntity()`; `.toString()` at every VO→column crossing. |
+| 3 | 1 | `revoke()` via private ctor (not `reconstitute({...this})` — that drags a `Token` + relation into a raw row); `preserve` field-maps **scalar columns only**. |
+| 4 | 1 | Interface is in `domain/`, not `infrastructure/`; the `Partial<AccountEntity>` mistype is in **both** interface + impl. |
+| 5 | 2 | **Email normalization ↔ uniqueness SoT** — normalize on write **and** lookup; add no-revalidation `reconstitute`; drop the validating `Token.fromString`. |
+| 6 | 4 | **Rule 3 rewritten** — allow app→foreign-`domain` (the intended port), forbid only app→foreign-`infrastructure`. |
+| 7 | 3 | **Migration safety** — backfill/de-dupe the frozen token + drop the DB DEFAULT **before/with** a **partial** `UNIQUE(token) WHERE deleted_at IS NULL`, atomic with the `Token.create()` cutover; prod dup pre-check. |
+| 8 | 3 | Relay needs `FOR UPDATE SKIP LOCKED` + a `failed` terminal state + `stop()`; cite the idempotent consumer; resolve the outbox repo from the tx-owning manager (shared-`context` footgun). |
+| — | 3/2/1 | Reframe "kills the dual-write" → **event** dual-write (Cognito/SES stay live); flag `.value.ts` + `enqueue` as new coinages; event runnable must init the Kafka producer; outbox DAO under `modules/**/infrastructure/`; `node:crypto` import; fixtures need distinct tokens; Rule 1 has 3 unlisted violations → commit to `warn`. |
